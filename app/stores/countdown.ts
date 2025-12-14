@@ -1,5 +1,4 @@
-import { defineStore, skipHydrate } from 'pinia'
-import { useLocalStorage } from '@vueuse/core'
+import { defineStore } from 'pinia'
 
 export interface Milestone {
     id: string
@@ -9,47 +8,41 @@ export interface Milestone {
 }
 
 export interface CountdownState {
+    examName: string | null
     examDate: string | null
-    examName: string
     milestones: Milestone[]
 }
 
-const generateId = () => `milestone_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
-const milestoneColors = ['#ef4444', '#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6']
-
 export const useCountdownStore = defineStore('countdown', () => {
-    // Use useLocalStorage for automatic persistence
+    const examName = ref<string | null>(null)
     const examDate = ref<string | null>(null)
-    const examName = ref('')
     const milestones = ref<Milestone[]>([])
+    const loading = ref(false)
+    const initialized = ref(false)
 
-    // Load from localStorage on client
-    if (import.meta.client) {
-        const saved = localStorage.getItem('exam-sprint-countdown')
-        if (saved) {
-            try {
-                const data = JSON.parse(saved)
-                examDate.value = data.examDate || null
-                examName.value = data.examName || ''
-                milestones.value = data.milestones || []
-            } catch (e) {
-                console.error('Failed to load countdown state:', e)
-            }
+    // Fetch countdown data from API
+    const fetchCountdown = async () => {
+        if (initialized.value) return
+        loading.value = true
+        try {
+            const data = await $fetch<CountdownState>('/api/countdown')
+            examName.value = data.examName
+            examDate.value = data.examDate
+            milestones.value = data.milestones
+            initialized.value = true
+        } catch (error) {
+            console.error('Failed to fetch countdown:', error)
+        } finally {
+            loading.value = false
         }
     }
 
-    // Save helper
-    const save = () => {
-        if (!import.meta.client) return
-        localStorage.setItem('exam-sprint-countdown', JSON.stringify({
-            examDate: examDate.value,
-            examName: examName.value,
-            milestones: milestones.value,
-        }))
+    // Initialize on client side
+    if (import.meta.client) {
+        fetchCountdown()
     }
 
-    // Getters
+    // Computed
     const examCountdown = computed(() => {
         if (!examDate.value) return null
 
@@ -69,55 +62,48 @@ export const useCountdownStore = defineStore('countdown', () => {
         return { days, hours, minutes, seconds, total: diff }
     })
 
-    const sortedMilestones = computed(() => {
-        return [...milestones.value].sort((a, b) =>
-            new Date(a.date).getTime() - new Date(b.date).getTime()
-        )
-    })
-
     const upcomingMilestones = computed(() => {
         const now = new Date()
-        return sortedMilestones.value.filter(m => new Date(m.date) > now)
+        return milestones.value
+            .filter(m => new Date(m.date) > now)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     })
 
     // Actions
-    const setExam = (name: string, date: string) => {
-        examName.value = name
-        examDate.value = date
-        save()
-    }
-
-    const clearExam = () => {
-        examName.value = ''
-        examDate.value = null
-        save()
-    }
-
-    const addMilestone = (name: string, date: string) => {
-        const milestone: Milestone = {
-            id: generateId(),
-            name,
-            date,
-            color: milestoneColors[milestones.value.length % milestoneColors.length],
-        }
-        milestones.value.push(milestone)
-        save()
-        return milestone
-    }
-
-    const updateMilestone = (id: string, updates: Partial<Omit<Milestone, 'id'>>) => {
-        const index = milestones.value.findIndex(m => m.id === id)
-        if (index !== -1) {
-            milestones.value[index] = { ...milestones.value[index], ...updates }
-            save()
+    const setExam = async (name: string, date: string) => {
+        try {
+            await $fetch('/api/countdown', {
+                method: 'PUT',
+                body: { examName: name, examDate: date },
+            })
+            examName.value = name
+            examDate.value = date
+        } catch (error) {
+            console.error('Failed to set exam:', error)
+            throw error
         }
     }
 
-    const deleteMilestone = (id: string) => {
-        const index = milestones.value.findIndex(m => m.id === id)
-        if (index !== -1) {
-            milestones.value.splice(index, 1)
-            save()
+    const addMilestone = async (name: string, date: string) => {
+        try {
+            const newMilestone = await $fetch<Milestone>('/api/countdown/milestones', {
+                method: 'POST',
+                body: { name, date },
+            })
+            milestones.value.push(newMilestone)
+        } catch (error) {
+            console.error('Failed to add milestone:', error)
+            throw error
+        }
+    }
+
+    const deleteMilestone = async (id: string) => {
+        try {
+            await $fetch(`/api/countdown/milestones/${id}`, { method: 'DELETE' })
+            milestones.value = milestones.value.filter(m => m.id !== id)
+        } catch (error) {
+            console.error('Failed to delete milestone:', error)
+            throw error
         }
     }
 
@@ -129,31 +115,21 @@ export const useCountdownStore = defineStore('countdown', () => {
         const target = new Date(milestone.date)
         const diff = target.getTime() - now.getTime()
 
-        if (diff <= 0) {
-            return { days: 0, hours: 0, minutes: 0, total: 0 }
-        }
+        if (diff <= 0) return { days: 0 }
 
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-
-        return { days, hours, minutes, total: diff }
+        return { days: Math.ceil(diff / (1000 * 60 * 60 * 24)) }
     }
 
     return {
-        // State
-        examDate: skipHydrate(examDate),
-        examName: skipHydrate(examName),
-        milestones: skipHydrate(milestones),
-        // Getters
+        examName,
+        examDate,
+        milestones,
+        loading,
         examCountdown,
-        sortedMilestones,
         upcomingMilestones,
-        // Actions
+        fetchCountdown,
         setExam,
-        clearExam,
         addMilestone,
-        updateMilestone,
         deleteMilestone,
         getMilestoneCountdown,
     }

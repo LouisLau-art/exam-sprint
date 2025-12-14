@@ -34,7 +34,7 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {{ t('goals.deadline') }}
             </label>
-            <DatePicker v-model="formData.deadline" :placeholder="t('goals.deadline')" />
+            <UiCalendarPicker v-model="formData.deadline" />
           </div>
         </div>
         

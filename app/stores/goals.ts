@@ -1,4 +1,4 @@
-import { defineStore, skipHydrate } from 'pinia'
+import { defineStore } from 'pinia'
 
 export interface Goal {
     id: string
@@ -9,42 +9,37 @@ export interface Goal {
     target: number
     current: number
     unit: string
-    color: string
-    createdAt: string
+    color?: string
+    createdAt?: string
+    updatedAt?: string
 }
-
-const generateId = () => `goal_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
-const goalColors = [
-    '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#0ea5e9',
-]
-
-const STORAGE_KEY = 'exam-sprint-goals'
 
 export const useGoalsStore = defineStore('goals', () => {
     const goals = ref<Goal[]>([])
+    const loading = ref(false)
+    const initialized = ref(false)
 
-    // Load from localStorage on client
-    if (import.meta.client) {
-        const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) {
-            try {
-                const data = JSON.parse(saved)
-                goals.value = data.goals || []
-            } catch (e) {
-                console.error('Failed to load goals state:', e)
-            }
+    // Fetch all goals from API
+    const fetchGoals = async () => {
+        if (initialized.value) return
+        loading.value = true
+        try {
+            const data = await $fetch<Goal[]>('/api/goals')
+            goals.value = data
+            initialized.value = true
+        } catch (error) {
+            console.error('Failed to fetch goals:', error)
+        } finally {
+            loading.value = false
         }
     }
 
-    const save = () => {
-        if (!import.meta.client) return
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            goals: goals.value,
-        }))
+    // Initialize on client side
+    if (import.meta.client) {
+        fetchGoals()
     }
 
-    // Getters
+    // Computed
     const allGoals = computed(() => goals.value)
 
     const activeGoals = computed(() =>
@@ -56,75 +51,70 @@ export const useGoalsStore = defineStore('goals', () => {
     )
 
     // Actions
-    const getGoal = (id: string) => {
-        return goals.value.find(g => g.id === id)
+    const addGoal = async (goalData: Omit<Goal, 'id' | 'current' | 'createdAt' | 'updatedAt'>) => {
+        try {
+            const newGoal = await $fetch<Goal>('/api/goals', {
+                method: 'POST',
+                body: { ...goalData, current: 0 },
+            })
+            goals.value.unshift(newGoal)
+            return newGoal
+        } catch (error) {
+            console.error('Failed to add goal:', error)
+            throw error
+        }
     }
 
-    const getProgress = (id: string) => {
+    const updateGoal = async (id: string, updates: Partial<Goal>) => {
+        try {
+            await $fetch(`/api/goals/${id}`, {
+                method: 'PUT',
+                body: updates,
+            })
+            const index = goals.value.findIndex(g => g.id === id)
+            if (index !== -1) {
+                goals.value[index] = { ...goals.value[index], ...updates }
+            }
+        } catch (error) {
+            console.error('Failed to update goal:', error)
+            throw error
+        }
+    }
+
+    const deleteGoal = async (id: string) => {
+        try {
+            await $fetch(`/api/goals/${id}`, { method: 'DELETE' })
+            goals.value = goals.value.filter(g => g.id !== id)
+        } catch (error) {
+            console.error('Failed to delete goal:', error)
+            throw error
+        }
+    }
+
+    const incrementGoalProgress = async (id: string, amount: number = 1) => {
+        const goal = goals.value.find(g => g.id === id)
+        if (goal) {
+            await updateGoal(id, { current: goal.current + amount })
+        }
+    }
+
+    const getGoalProgress = (id: string) => {
         const goal = goals.value.find(g => g.id === id)
         if (!goal) return 0
         return Math.min(100, Math.round((goal.current / goal.target) * 100))
     }
 
-    const addGoal = (goalData: Omit<Goal, 'id' | 'createdAt' | 'current' | 'color'>) => {
-        const newGoal: Goal = {
-            ...goalData,
-            id: generateId(),
-            createdAt: new Date().toISOString(),
-            current: 0,
-            color: goalColors[goals.value.length % goalColors.length],
-        }
-        goals.value.push(newGoal)
-        save()
-        return newGoal
-    }
-
-    const updateGoal = (id: string, updates: Partial<Omit<Goal, 'id' | 'createdAt'>>) => {
-        const index = goals.value.findIndex(g => g.id === id)
-        if (index !== -1) {
-            goals.value[index] = { ...goals.value[index], ...updates }
-            save()
-        }
-    }
-
-    const updateProgress = (id: string, value: number) => {
-        const goal = goals.value.find(g => g.id === id)
-        if (goal) {
-            goal.current = value
-            save()
-        }
-    }
-
-    const incrementProgress = (id: string, amount: number = 1) => {
-        const goal = goals.value.find(g => g.id === id)
-        if (goal) {
-            goal.current = Math.min(goal.target, goal.current + amount)
-            save()
-        }
-    }
-
-    const deleteGoal = (id: string) => {
-        const index = goals.value.findIndex(g => g.id === id)
-        if (index !== -1) {
-            goals.value.splice(index, 1)
-            save()
-        }
-    }
-
     return {
-        // State
-        goals: skipHydrate(goals),
-        // Getters
+        goals,
+        loading,
         allGoals,
         activeGoals,
         completedGoals,
-        // Actions
-        getGoal,
-        getProgress,
+        fetchGoals,
         addGoal,
         updateGoal,
-        updateProgress,
-        incrementProgress,
         deleteGoal,
+        incrementGoalProgress,
+        getGoalProgress,
     }
 })

@@ -1,4 +1,4 @@
-import { defineStore, skipHydrate } from 'pinia'
+import { defineStore } from 'pinia'
 
 export interface Task {
     id: string
@@ -6,48 +6,44 @@ export interface Task {
     notes: string
     dueDate: string | null
     priority: 'P0' | 'P1' | 'P2'
-    goalId: string | null
-    tags: string[]
     estimatedPomodoros: number
-    completedPomodoros: number
+    tags: string[]
+    goalId: string | null
     completed: boolean
-    createdAt: string
-    completedAt: string | null
-    order: number
+    createdAt?: string
+    updatedAt?: string
 }
-
-const generateId = () => `task_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
-const STORAGE_KEY = 'exam-sprint-tasks'
 
 export const useTasksStore = defineStore('tasks', () => {
     const tasks = ref<Task[]>([])
+    const loading = ref(false)
+    const initialized = ref(false)
 
-    // Load from localStorage on client
-    if (import.meta.client) {
-        const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) {
-            try {
-                const data = JSON.parse(saved)
-                tasks.value = data.tasks || []
-            } catch (e) {
-                console.error('Failed to load tasks state:', e)
-            }
+    // Fetch all tasks from API
+    const fetchTasks = async () => {
+        if (initialized.value) return
+        loading.value = true
+        try {
+            const data = await $fetch<Task[]>('/api/tasks')
+            tasks.value = data
+            initialized.value = true
+        } catch (error) {
+            console.error('Failed to fetch tasks:', error)
+        } finally {
+            loading.value = false
         }
     }
 
-    const save = () => {
-        if (!import.meta.client) return
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            tasks: tasks.value,
-        }))
+    // Initialize on client side
+    if (import.meta.client) {
+        fetchTasks()
     }
 
-    // Getters
+    // Computed
     const allTasks = computed(() => tasks.value)
 
     const incompleteTasks = computed(() =>
-        tasks.value.filter(t => !t.completed).sort((a, b) => a.order - b.order)
+        tasks.value.filter(t => !t.completed)
     )
 
     const completedTasks = computed(() =>
@@ -56,112 +52,82 @@ export const useTasksStore = defineStore('tasks', () => {
 
     const todayTasks = computed(() => {
         const today = new Date().toISOString().split('T')[0]
-        return tasks.value.filter(t => {
-            if (t.completed) return false
-            if (!t.dueDate) return true
-            return t.dueDate <= today
-        }).sort((a, b) => {
-            const priorityOrder = { P0: 0, P1: 1, P2: 2 }
-            const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority]
-            if (priorityDiff !== 0) return priorityDiff
-            return a.order - b.order
-        })
-    })
-
-    const thisWeekTasks = computed(() => {
-        const today = new Date()
-        const weekEnd = new Date(today)
-        weekEnd.setDate(today.getDate() + 7)
-        const weekEndStr = weekEnd.toISOString().split('T')[0]
-
-        return tasks.value.filter(t => {
-            if (t.completed) return false
-            if (!t.dueDate) return false
-            return t.dueDate <= weekEndStr
-        }).sort((a, b) => a.order - b.order)
+        return tasks.value.filter(t => t.dueDate === today || !t.dueDate)
     })
 
     const todayCompletedCount = computed(() => {
         const today = new Date().toISOString().split('T')[0]
         return tasks.value.filter(t =>
-            t.completed && t.completedAt?.startsWith(today)
+            t.completed &&
+            t.updatedAt?.startsWith(today)
         ).length
     })
 
     // Actions
-    const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'completedAt' | 'order' | 'completedPomodoros'>) => {
-        const newTask: Task = {
-            ...taskData,
-            id: generateId(),
-            createdAt: new Date().toISOString(),
-            completedAt: null,
-            completedPomodoros: 0,
-            order: tasks.value.length,
-        }
-        tasks.value.push(newTask)
-        save()
-        return newTask
-    }
-
-    const updateTask = (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => {
-        const index = tasks.value.findIndex(t => t.id === id)
-        if (index !== -1) {
-            tasks.value[index] = { ...tasks.value[index], ...updates }
-            save()
+    const addTask = async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
+        try {
+            const newTask = await $fetch<Task>('/api/tasks', {
+                method: 'POST',
+                body: taskData,
+            })
+            tasks.value.unshift(newTask)
+            return newTask
+        } catch (error) {
+            console.error('Failed to add task:', error)
+            throw error
         }
     }
 
-    const toggleComplete = (id: string) => {
-        const task = tasks.value.find(t => t.id === id)
-        if (task) {
-            task.completed = !task.completed
-            task.completedAt = task.completed ? new Date().toISOString() : null
-            save()
-        }
-    }
-
-    const deleteTask = (id: string) => {
-        const index = tasks.value.findIndex(t => t.id === id)
-        if (index !== -1) {
-            tasks.value.splice(index, 1)
-            save()
-        }
-    }
-
-    const reorderTasks = (taskIds: string[]) => {
-        taskIds.forEach((id, index) => {
-            const task = tasks.value.find(t => t.id === id)
-            if (task) {
-                task.order = index
+    const updateTask = async (id: string, updates: Partial<Task>) => {
+        try {
+            await $fetch(`/api/tasks/${id}`, {
+                method: 'PUT',
+                body: updates,
+            })
+            const index = tasks.value.findIndex(t => t.id === id)
+            if (index !== -1) {
+                tasks.value[index] = { ...tasks.value[index], ...updates }
             }
-        })
-        save()
+        } catch (error) {
+            console.error('Failed to update task:', error)
+            throw error
+        }
     }
 
-    const incrementPomodoro = (id: string) => {
+    const deleteTask = async (id: string) => {
+        try {
+            await $fetch(`/api/tasks/${id}`, { method: 'DELETE' })
+            tasks.value = tasks.value.filter(t => t.id !== id)
+        } catch (error) {
+            console.error('Failed to delete task:', error)
+            throw error
+        }
+    }
+
+    const toggleTask = async (id: string) => {
         const task = tasks.value.find(t => t.id === id)
         if (task) {
-            task.completedPomodoros++
-            save()
+            await updateTask(id, { completed: !task.completed })
         }
+    }
+
+    const getTasksByGoal = (goalId: string) => {
+        return tasks.value.filter(t => t.goalId === goalId)
     }
 
     return {
-        // State
-        tasks: skipHydrate(tasks),
-        // Getters
+        tasks,
+        loading,
         allTasks,
         incompleteTasks,
         completedTasks,
         todayTasks,
-        thisWeekTasks,
         todayCompletedCount,
-        // Actions
+        fetchTasks,
         addTask,
         updateTask,
-        toggleComplete,
         deleteTask,
-        reorderTasks,
-        incrementPomodoro,
+        toggleTask,
+        getTasksByGoal,
     }
 })

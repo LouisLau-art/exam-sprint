@@ -19,6 +19,11 @@ logs
 .idea
 *.local
 
+# SQLite database
+*.db
+*.db-shm
+*.db-wal
+
 # Local env files
 .env
 .env.*

@@ -66,7 +66,7 @@
                 {{ session.duration }} {{ t('common.minutes') }}
               </p>
               <p class="text-xs text-slate-500">
-                {{ formatTime(session.startTime) }}
+                {{ formatTime(session.startedAt) }}
               </p>
             </div>
           </div>
@@ -115,22 +115,55 @@ const getLast7Days = () => {
   return days
 }
 
-// Use safe access
-const todayFocusMinutes = computed(() => pomodoroStore.todayFocusMinutes || 0)
-const todayPomodoroCount = computed(() => pomodoroStore.todayPomodoroCount || 0)
+// Calculate real weekly data from sessions
+const getWeeklyFocusData = () => {
+  const sessions = pomodoroStore.sessions || []
+  const data: number[] = []
+  
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date()
+    date.setDate(date.getDate() - i)
+    const dateStr = date.toISOString().split('T')[0]
+    
+    const dayMinutes = sessions
+      .filter((s: any) => s.type === 'focus' && s.completedAt?.startsWith(dateStr))
+      .reduce((sum: number, s: any) => sum + (s.duration || 0), 0)
+    
+    data.push(dayMinutes)
+  }
+  return data
+}
 
-// Mock data for demo (in real app, would come from store)
+const getWeeklyTaskData = () => {
+  const sessions = pomodoroStore.sessions || []
+  const data: number[] = []
+  
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date()
+    date.setDate(date.getDate() - i)
+    const dateStr = date.toISOString().split('T')[0]
+    
+    const dayCount = sessions
+      .filter((s: any) => s.type === 'focus' && s.completedAt?.startsWith(dateStr))
+      .length
+    
+    data.push(dayCount)
+  }
+  return data
+}
+
+// Real data from store
 const focusSeries = computed(() => [
   {
     name: t('stats.focusMinutes'),
-    data: [45, 75, 60, 90, 80, 120, todayFocusMinutes.value],
+    data: getWeeklyFocusData(),
   },
 ])
 
 const taskSeries = computed(() => [
   {
     name: t('stats.completedTasks'),
-    data: [3, 5, 4, 6, 5, 8, todayPomodoroCount.value],
+    data: getWeeklyTaskData(),
   },
 ])
 
@@ -162,6 +195,12 @@ const focusChartOptions = computed(() => ({
     strokeDashArray: 4,
   },
   dataLabels: { enabled: false },
+  tooltip: {
+    theme: 'dark',
+    style: {
+      fontSize: '14px',
+    },
+  },
 }))
 
 const taskChartOptions = computed(() => ({
@@ -189,13 +228,19 @@ const taskChartOptions = computed(() => ({
     strokeDashArray: 4,
   },
   dataLabels: { enabled: false },
+  tooltip: {
+    theme: 'dark',
+    style: {
+      fontSize: '14px',
+    },
+  },
 }))
 
 const recentSessions = computed(() => {
   const sessions = pomodoroStore.sessions || []
   const today = new Date().toISOString().split('T')[0]
   return sessions
-    .filter((s: any) => s.completed && s.type === 'focus' && s.startTime.startsWith(today))
+    .filter((s: any) => s.type === 'focus' && s.completedAt?.startsWith(today))
     .slice(-5)
     .reverse()
 })

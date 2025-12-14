@@ -14,7 +14,7 @@
     <!-- Goals Grid -->
     <div v-if="goalsStore.allGoals.length" class="grid md:grid-cols-2 gap-6">
       <div
-        v-for="goal in goalsStore.allGoals"
+        v-for="(goal, index) in goalsStore.allGoals"
         :key="goal.id"
         class="card group cursor-pointer hover:shadow-2xl transition-all"
         @click="editGoal(goal)"
@@ -24,7 +24,7 @@
           <div class="flex items-center gap-3">
             <div 
               class="w-4 h-4 rounded-full"
-              :style="{ backgroundColor: goal.color }"
+              :style="{ backgroundColor: getGoalColor(goal, index) }"
             />
             <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
               {{ goal.title }}
@@ -58,7 +58,7 @@
                 cy="40"
                 r="36"
                 fill="none"
-                :stroke="goal.color"
+                :stroke="getGoalColor(goal, index)"
                 stroke-width="6"
                 :stroke-dasharray="226.2"
                 :stroke-dashoffset="226.2 - (getProgress(goal) / 100) * 226.2"
@@ -67,7 +67,7 @@
               />
             </svg>
             <div class="absolute inset-0 flex-center">
-              <span class="text-lg font-bold" :style="{ color: goal.color }">
+              <span class="text-lg font-bold" :style="{ color: getGoalColor(goal, index) }">
                 {{ getProgress(goal) }}%
               </span>
             </div>
@@ -128,6 +128,12 @@ const editGoal = (goal: Goal) => {
 
 const getProgress = (goal: Goal) => {
   return Math.min(100, Math.round((goal.current / goal.target) * 100))
+}
+
+const goalColors = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6']
+
+const getGoalColor = (goal: Goal, index: number) => {
+  return goal.color || goalColors[index % goalColors.length]
 }
 
 const formatDate = (dateStr: string) => {

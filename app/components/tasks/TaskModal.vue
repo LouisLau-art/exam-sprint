@@ -27,7 +27,7 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {{ t('tasks.dueDate') }}
             </label>
-            <DatePicker v-model="formData.dueDate" :placeholder="t('tasks.dueDate')" />
+            <UiCalendarPicker v-model="formData.dueDate" />
           </div>
           
           <div>

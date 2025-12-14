@@ -1,61 +1,69 @@
-import { defineStore, skipHydrate } from 'pinia'
+import { defineStore } from 'pinia'
 
 export interface PomodoroSession {
     id: string
-    startTime: string
-    endTime: string | null
+    type: 'focus' | 'short-break' | 'long-break'
     duration: number
-    completed: boolean
     taskId: string | null
     note: string
-    type: 'focus' | 'short-break' | 'long-break'
+    startedAt: string
+    completedAt: string
 }
 
-const generateId = () => `pomodoro_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
-const STORAGE_KEY = 'exam-sprint-pomodoro'
-
-const getSettings = () => {
-    return { focusDuration: 25, shortBreak: 5, longBreak: 15, longBreakInterval: 4 }
+export interface PomodoroSettings {
+    focusDuration: number
+    shortBreakDuration: number
+    longBreakDuration: number
+    sessionsBeforeLongBreak: number
 }
+
+type TimerStatus = 'idle' | 'running' | 'paused'
 
 export const usePomodoroStore = defineStore('pomodoro', () => {
-    // State
-    const status = ref<'idle' | 'running' | 'paused'>('idle')
+    // Settings
+    const settings = ref<PomodoroSettings>({
+        focusDuration: 25,
+        shortBreakDuration: 5,
+        longBreakDuration: 15,
+        sessionsBeforeLongBreak: 4,
+    })
+
+    // Timer state
     const type = ref<'focus' | 'short-break' | 'long-break'>('focus')
-    const timeRemaining = ref(25 * 60)
-    const currentSession = ref<PomodoroSession | null>(null)
+    const status = ref<TimerStatus>('idle')
+    const timeRemaining = ref(settings.value.focusDuration * 60)
+    const sessionCount = ref(0)
+    const currentTaskId = ref<string | null>(null)
+    const timerStartedAt = ref<string | null>(null)
+
+    // Sessions from API
     const sessions = ref<PomodoroSession[]>([])
-    const consecutiveFocusSessions = ref(0)
+    const initialized = ref(false)
 
-    let timerId: NodeJS.Timeout | null = null
+    // Timer interval
+    let timerInterval: ReturnType<typeof setInterval> | undefined
 
-    // Load sessions from localStorage on client
-    if (import.meta.client) {
-        const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) {
-            try {
-                const data = JSON.parse(saved)
-                sessions.value = data.sessions || []
-                consecutiveFocusSessions.value = data.consecutiveFocusSessions || 0
-            } catch (e) {
-                console.error('Failed to load pomodoro state:', e)
-            }
+    // Fetch sessions from API
+    const fetchSessions = async () => {
+        if (initialized.value) return
+        try {
+            const data = await $fetch<PomodoroSession[]>('/api/pomodoro/sessions')
+            sessions.value = data
+            initialized.value = true
+        } catch (error) {
+            console.error('Failed to fetch sessions:', error)
         }
     }
 
-    const save = () => {
-        if (!import.meta.client) return
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            sessions: sessions.value,
-            consecutiveFocusSessions: consecutiveFocusSessions.value,
-        }))
+    // Initialize on client side
+    if (import.meta.client) {
+        fetchSessions()
     }
 
-    // Getters
+    // Computed
+    const isIdle = computed(() => status.value === 'idle')
     const isRunning = computed(() => status.value === 'running')
     const isPaused = computed(() => status.value === 'paused')
-    const isIdle = computed(() => status.value === 'idle')
 
     const formattedTime = computed(() => {
         const minutes = Math.floor(timeRemaining.value / 60)
@@ -63,191 +71,179 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
     })
 
-    const progress = computed(() => {
-        const settings = getSettings()
-        let totalSeconds: number
-
+    const totalDuration = computed(() => {
         switch (type.value) {
-            case 'focus':
-                totalSeconds = settings.focusDuration * 60
-                break
-            case 'short-break':
-                totalSeconds = settings.shortBreak * 60
-                break
-            case 'long-break':
-                totalSeconds = settings.longBreak * 60
-                break
+            case 'focus': return settings.value.focusDuration * 60
+            case 'short-break': return settings.value.shortBreakDuration * 60
+            case 'long-break': return settings.value.longBreakDuration * 60
         }
-
-        return ((totalSeconds - timeRemaining.value) / totalSeconds) * 100
     })
 
-    const todaySessions = computed(() => {
-        const today = new Date().toISOString().split('T')[0]
-        return sessions.value.filter(s =>
-            s.completed && s.type === 'focus' && s.startTime.startsWith(today)
-        )
-    })
-
-    const todayFocusMinutes = computed(() => {
-        return todaySessions.value.reduce((sum, s) => sum + s.duration, 0)
+    const progress = computed(() => {
+        return ((totalDuration.value - timeRemaining.value) / totalDuration.value) * 100
     })
 
     const todayPomodoroCount = computed(() => {
-        return todaySessions.value.length
+        const today = new Date().toISOString().split('T')[0]
+        return sessions.value.filter(s =>
+            s.type === 'focus' &&
+            s.completedAt.startsWith(today)
+        ).length
+    })
+
+    const todayFocusMinutes = computed(() => {
+        const today = new Date().toISOString().split('T')[0]
+        return sessions.value
+            .filter(s => s.type === 'focus' && s.completedAt.startsWith(today))
+            .reduce((acc, s) => acc + s.duration, 0)
     })
 
     // Actions
-    const start = (taskId: string | null = null) => {
-        const settings = getSettings()
-
-        status.value = 'running'
-        currentSession.value = {
-            id: generateId(),
-            startTime: new Date().toISOString(),
-            endTime: null,
-            duration: settings.focusDuration,
-            completed: false,
-            taskId,
-            note: '',
-            type: type.value,
-        }
-
-        startTimer()
-    }
-
-    const pause = () => {
-        status.value = 'paused'
-        stopTimer()
-    }
-
-    const resume = () => {
-        status.value = 'running'
-        startTimer()
-    }
-
-    const stop = () => {
-        stopTimer()
-
-        if (currentSession.value) {
-            currentSession.value.endTime = new Date().toISOString()
-            currentSession.value.completed = false
-        }
-
-        reset()
-    }
-
-    const skip = () => {
-        completeSession()
-    }
-
-    const reset = () => {
-        const settings = getSettings()
-        status.value = 'idle'
-        type.value = 'focus'
-        timeRemaining.value = settings.focusDuration * 60
-        currentSession.value = null
-    }
-
     const setType = (newType: 'focus' | 'short-break' | 'long-break') => {
         if (status.value !== 'idle') return
-
-        const settings = getSettings()
         type.value = newType
-
         switch (newType) {
             case 'focus':
-                timeRemaining.value = settings.focusDuration * 60
+                timeRemaining.value = settings.value.focusDuration * 60
                 break
             case 'short-break':
-                timeRemaining.value = settings.shortBreak * 60
+                timeRemaining.value = settings.value.shortBreakDuration * 60
                 break
             case 'long-break':
-                timeRemaining.value = settings.longBreak * 60
+                timeRemaining.value = settings.value.longBreakDuration * 60
                 break
         }
     }
 
-    const startTimer = () => {
-        if (timerId) {
-            clearInterval(timerId)
-        }
+    const start = () => {
+        if (status.value === 'running') return
+        status.value = 'running'
+        timerStartedAt.value = new Date().toISOString()
 
-        timerId = setInterval(() => {
+        timerInterval = setInterval(() => {
             if (timeRemaining.value > 0) {
                 timeRemaining.value--
             } else {
-                completeSession()
+                complete()
             }
         }, 1000)
     }
 
-    const stopTimer = () => {
-        if (timerId) {
-            clearInterval(timerId)
-            timerId = null
+    const pause = () => {
+        if (status.value !== 'running') return
+        status.value = 'paused'
+        if (timerInterval) {
+            clearInterval(timerInterval)
+            timerInterval = undefined
         }
     }
 
-    const completeSession = () => {
-        stopTimer()
+    const resume = () => {
+        if (status.value !== 'paused') return
+        start()
+    }
 
-        if (currentSession.value) {
-            currentSession.value.endTime = new Date().toISOString()
-            currentSession.value.completed = true
-            sessions.value.push({ ...currentSession.value })
+    const stop = () => {
+        status.value = 'idle'
+        if (timerInterval) {
+            clearInterval(timerInterval)
+            timerInterval = undefined
+        }
+        timeRemaining.value = totalDuration.value
+        timerStartedAt.value = null
+    }
 
-            if (type.value === 'focus') {
-                consecutiveFocusSessions.value++
-            }
+    const skip = () => {
+        if (type.value === 'focus') return
+        completeBreak()
+    }
 
-            save()
+    const complete = async () => {
+        if (timerInterval) {
+            clearInterval(timerInterval)
+            timerInterval = undefined
         }
 
-        const settings = getSettings()
+        const completedAt = new Date().toISOString()
+        const duration = type.value === 'focus'
+            ? settings.value.focusDuration
+            : type.value === 'short-break'
+                ? settings.value.shortBreakDuration
+                : settings.value.longBreakDuration
 
+        // Save session to API
+        try {
+            const session = await $fetch<PomodoroSession>('/api/pomodoro/sessions', {
+                method: 'POST',
+                body: {
+                    type: type.value,
+                    duration,
+                    taskId: currentTaskId.value,
+                    note: '',
+                    startedAt: timerStartedAt.value,
+                    completedAt,
+                },
+            })
+            sessions.value.unshift(session)
+        } catch (error) {
+            console.error('Failed to save session:', error)
+        }
+
+        // Handle next session
         if (type.value === 'focus') {
-            if (consecutiveFocusSessions.value >= settings.longBreakInterval) {
-                type.value = 'long-break'
-                timeRemaining.value = settings.longBreak * 60
-                consecutiveFocusSessions.value = 0
+            sessionCount.value++
+            if (sessionCount.value >= settings.value.sessionsBeforeLongBreak) {
+                setType('long-break')
+                sessionCount.value = 0
             } else {
-                type.value = 'short-break'
-                timeRemaining.value = settings.shortBreak * 60
+                setType('short-break')
             }
         } else {
-            type.value = 'focus'
-            timeRemaining.value = settings.focusDuration * 60
+            setType('focus')
         }
 
         status.value = 'idle'
-        currentSession.value = null
+        timerStartedAt.value = null
+    }
+
+    const completeBreak = () => {
+        if (timerInterval) {
+            clearInterval(timerInterval)
+            timerInterval = undefined
+        }
+        setType('focus')
+        status.value = 'idle'
+        timerStartedAt.value = null
+    }
+
+    const setCurrentTask = (taskId: string | null) => {
+        currentTaskId.value = taskId
     }
 
     return {
-        // State
-        status: skipHydrate(status),
-        type: skipHydrate(type),
-        timeRemaining: skipHydrate(timeRemaining),
-        currentSession: skipHydrate(currentSession),
-        sessions: skipHydrate(sessions),
-        consecutiveFocusSessions: skipHydrate(consecutiveFocusSessions),
-        // Getters
+        settings,
+        type,
+        status,
+        timeRemaining,
+        sessionCount,
+        currentTaskId,
+        sessions,
+        isIdle,
         isRunning,
         isPaused,
-        isIdle,
         formattedTime,
+        totalDuration,
         progress,
-        todaySessions,
-        todayFocusMinutes,
         todayPomodoroCount,
-        // Actions
+        todayFocusMinutes,
+        fetchSessions,
+        setType,
         start,
         pause,
         resume,
         stop,
         skip,
-        reset,
-        setType,
+        complete,
+        setCurrentTask,
     }
 })

@@ -27,7 +27,7 @@
 - **图表**: ApexCharts
 - **图标**: Lucide Icons (via Nuxt Icon)
 - **国际化**: @nuxtjs/i18n
-- **存储**: LocalStorage
+- **存储**: SQLite (服务端持久化)
 
 ### 🚀 快速开始
 
