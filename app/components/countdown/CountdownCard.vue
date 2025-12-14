@@ -87,7 +87,7 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {{ t('countdown.examDate') }}
             </label>
-            <UInput v-model="formData.examDate" type="date" />
+            <DatePicker v-model="formData.examDate" :placeholder="t('countdown.examDate')" />
           </div>
           
           <div class="flex gap-2 justify-end pt-4">
@@ -120,7 +120,7 @@ const examName = computed(() => countdownStore.examName)
 
 // Real-time update for seconds - tick triggers recomputation
 const tick = ref(0)
-let updateInterval: NodeJS.Timeout | undefined
+let updateInterval: ReturnType<typeof setInterval> | undefined
 
 // Countdown that depends on tick to force recalculation
 const countdown = computed(() => {

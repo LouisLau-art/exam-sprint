@@ -22,17 +22,18 @@
 
 - **框架**: Nuxt 4 + Vue 3
 - **状态管理**: Pinia
-- **样式**: UnoCSS (原子化 CSS)
-- **组件**: Radix Vue (无障碍组件)
+- **UI 组件**: Nuxt UI v4 (基于 Radix Vue)
+- **样式**: Tailwind CSS v4
 - **图表**: ApexCharts
-- **图标**: Iconify
-- **存储**: LocalStorage (V1) / SQLite (计划中)
+- **图标**: Lucide Icons (via Nuxt Icon)
+- **国际化**: @nuxtjs/i18n
+- **存储**: LocalStorage
 
 ### 🚀 快速开始
 
 ```bash
 # 克隆项目
-git clone https://github.com/YOUR_USERNAME/exam-sprint.git
+git clone https://github.com/LouisLau-art/exam-sprint.git
 cd exam-sprint
 
 # 安装依赖
@@ -53,14 +54,26 @@ npm run build
 exam-sprint/
 ├── app/
 │   ├── components/     # Vue 组件
+│   │   ├── countdown/  # 倒计时相关组件
+│   │   ├── dashboard/  # 仪表盘组件
+│   │   ├── goals/      # 目标管理组件
+│   │   ├── layout/     # 布局组件
+│   │   ├── pomodoro/   # 番茄钟组件
+│   │   ├── tasks/      # 任务管理组件
+│   │   └── ui/         # 通用 UI 组件
 │   ├── pages/          # 页面路由
 │   ├── stores/         # Pinia stores
-│   ├── layouts/        # 布局组件
+│   ├── layouts/        # 布局模板
 │   └── assets/         # 静态资源
 ├── i18n/               # 国际化文件
-├── nuxt.config.ts      # Nuxt 配置
-└── uno.config.ts       # UnoCSS 配置
+│   └── locales/        # 语言包 (zh-CN, en-US)
+├── public/             # 公共资源
+└── nuxt.config.ts      # Nuxt 配置
 ```
+
+### 📸 截图
+
+> TODO: 添加应用截图
 
 ### 🤝 贡献
 
@@ -84,11 +97,22 @@ MIT License
 - 🌙 **Theme Switch** - Light/Dark/System
 - 🌐 **Bilingual** - 中文 & English
 
+### 🛠️ Tech Stack
+
+- **Framework**: Nuxt 4 + Vue 3
+- **State Management**: Pinia
+- **UI Components**: Nuxt UI v4 (based on Radix Vue)
+- **Styling**: Tailwind CSS v4
+- **Charts**: ApexCharts
+- **Icons**: Lucide Icons (via Nuxt Icon)
+- **i18n**: @nuxtjs/i18n
+- **Storage**: LocalStorage
+
 ### 🚀 Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/exam-sprint.git
+git clone https://github.com/LouisLau-art/exam-sprint.git
 cd exam-sprint
 
 # Install dependencies

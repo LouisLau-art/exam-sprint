@@ -34,7 +34,7 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {{ t('goals.deadline') }}
             </label>
-            <UInput v-model="formData.deadline" type="date" />
+            <DatePicker v-model="formData.deadline" :placeholder="t('goals.deadline')" />
           </div>
         </div>
         

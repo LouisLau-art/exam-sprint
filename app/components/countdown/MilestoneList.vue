@@ -64,7 +64,7 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {{ t('countdown.examDate') }}
             </label>
-            <UInput v-model="formData.date" type="date" />
+            <DatePicker v-model="formData.date" :placeholder="t('countdown.examDate')" />
           </div>
           
           <div class="flex gap-2 justify-end pt-4">
