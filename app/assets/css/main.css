@@ -1,8 +1,8 @@
-/* ExamSprint - Main CSS */
+/* ExamSprint - Main CSS with Glassmorphism */
 
 /* CSS Variables for theming */
 :root {
-  --color-bg: #f8fafc;
+  --color-bg: #f0f4f8;
   --color-surface: #ffffff;
   --color-surface-hover: #f1f5f9;
   --color-primary: #6366f1;
@@ -11,12 +11,14 @@
   --color-text: #1e293b;
   --color-text-secondary: #64748b;
   --color-text-muted: #94a3b8;
-  --color-border: rgba(255, 255, 255, 0.2);
-  --color-shadow: rgba(15, 23, 42, 0.08);
+  --color-border: rgba(255, 255, 255, 0.3);
+  --color-shadow: rgba(15, 23, 42, 0.1);
   
   /* Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-bg-strong: rgba(255, 255, 255, 0.85);
+  --glass-bg-subtle: rgba(255, 255, 255, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.4);
   --glass-blur: 20px;
   
   /* Priority colors */
@@ -41,11 +43,13 @@
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
   --color-border: rgba(100, 116, 139, 0.3);
-  --color-shadow: rgba(0, 0, 0, 0.3);
+  --color-shadow: rgba(0, 0, 0, 0.4);
   
   /* Glassmorphism - Dark */
-  --glass-bg: rgba(30, 41, 59, 0.7);
-  --glass-border: rgba(100, 116, 139, 0.3);
+  --glass-bg: rgba(30, 41, 59, 0.75);
+  --glass-bg-strong: rgba(30, 41, 59, 0.85);
+  --glass-bg-subtle: rgba(30, 41, 59, 0.5);
+  --glass-border: rgba(100, 116, 139, 0.4);
 }
 
 /* Base styles */
@@ -72,7 +76,7 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Gradient background */
+/* Beautiful gradient background with animated orbs */
 body::before {
   content: '';
   position: fixed;
@@ -81,16 +85,18 @@ body::before {
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(ellipse at top left, rgba(99, 102, 241, 0.15), transparent 50%),
-    radial-gradient(ellipse at bottom right, rgba(168, 85, 247, 0.1), transparent 50%);
+    radial-gradient(ellipse 80% 80% at 20% 20%, rgba(99, 102, 241, 0.2), transparent 50%),
+    radial-gradient(ellipse 60% 60% at 80% 80%, rgba(168, 85, 247, 0.15), transparent 50%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(236, 72, 153, 0.1), transparent 50%);
   pointer-events: none;
   z-index: -1;
 }
 
 :root.dark body::before {
   background: 
-    radial-gradient(ellipse at top left, rgba(99, 102, 241, 0.2), transparent 50%),
-    radial-gradient(ellipse at bottom right, rgba(168, 85, 247, 0.15), transparent 50%);
+    radial-gradient(ellipse 80% 80% at 20% 20%, rgba(99, 102, 241, 0.25), transparent 50%),
+    radial-gradient(ellipse 60% 60% at 80% 80%, rgba(168, 85, 247, 0.2), transparent 50%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(236, 72, 153, 0.15), transparent 50%);
 }
 
 /* Scrollbar */
@@ -124,12 +130,7 @@ body::before {
   outline-offset: 2px;
 }
 
-/* Transition utilities */
-.transition-theme {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-/* Glass card animation */
+/* Glassmorphism card animation */
 @keyframes glass-shimmer {
   0% {
     background-position: -200% 0;
@@ -164,4 +165,26 @@ body::before {
   100% {
     transform: scale(1);
   }
+}
+
+/* Float animation for decorative elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

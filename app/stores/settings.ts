@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useLocalStorage } from '@vueuse/core'
 
 export interface PomodoroSettings {
     focusDuration: number
@@ -27,6 +26,8 @@ export interface SettingsState {
     ai: AISettings
 }
 
+const STORAGE_KEY = 'exam-sprint-settings'
+
 const defaultSettings: SettingsState = {
     theme: 'system',
     locale: 'zh-CN',
@@ -47,50 +48,60 @@ const defaultSettings: SettingsState = {
     },
 }
 
-export const useSettingsStore = defineStore('settings', () => {
-    const settings = useLocalStorage<SettingsState>('exam-sprint-settings', defaultSettings)
-
-    // Theme
-    const theme = computed(() => settings.value.theme)
-    const setTheme = (newTheme: 'light' | 'dark' | 'system') => {
-        settings.value.theme = newTheme
+const loadState = (): SettingsState => {
+    if (typeof window === 'undefined') {
+        return { ...defaultSettings }
     }
 
-    // Locale
-    const locale = computed(() => settings.value.locale)
-    const setLocale = (newLocale: 'zh-CN' | 'en-US') => {
-        settings.value.locale = newLocale
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        if (saved) {
+            return { ...defaultSettings, ...JSON.parse(saved) }
+        }
+    } catch (e) {
+        console.error('Failed to load settings:', e)
     }
 
-    // Pomodoro settings
-    const pomodoroSettings = computed(() => settings.value.pomodoro)
-    const updatePomodoroSettings = (newSettings: Partial<PomodoroSettings>) => {
-        settings.value.pomodoro = { ...settings.value.pomodoro, ...newSettings }
-    }
+    return { ...defaultSettings }
+}
 
-    // Countdown settings
-    const countdownSettings = computed(() => settings.value.countdown)
-    const updateCountdownSettings = (newSettings: Partial<CountdownSettings>) => {
-        settings.value.countdown = { ...settings.value.countdown, ...newSettings }
-    }
+const saveState = (state: SettingsState) => {
+    if (typeof window === 'undefined') return
 
-    // AI settings
-    const aiSettings = computed(() => settings.value.ai)
-    const updateAISettings = (newSettings: Partial<AISettings>) => {
-        settings.value.ai = { ...settings.value.ai, ...newSettings }
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    } catch (e) {
+        console.error('Failed to save settings:', e)
     }
+}
 
-    return {
-        settings,
-        theme,
-        setTheme,
-        locale,
-        setLocale,
-        pomodoroSettings,
-        updatePomodoroSettings,
-        countdownSettings,
-        updateCountdownSettings,
-        aiSettings,
-        updateAISettings,
-    }
+export const useSettingsStore = defineStore('settings', {
+    state: (): SettingsState => loadState(),
+
+    actions: {
+        setTheme(newTheme: 'light' | 'dark' | 'system') {
+            this.theme = newTheme
+            saveState(this.$state)
+        },
+
+        setLocale(newLocale: 'zh-CN' | 'en-US') {
+            this.locale = newLocale
+            saveState(this.$state)
+        },
+
+        updatePomodoroSettings(newSettings: Partial<PomodoroSettings>) {
+            this.pomodoro = { ...this.pomodoro, ...newSettings }
+            saveState(this.$state)
+        },
+
+        updateCountdownSettings(newSettings: Partial<CountdownSettings>) {
+            this.countdown = { ...this.countdown, ...newSettings }
+            saveState(this.$state)
+        },
+
+        updateAISettings(newSettings: Partial<AISettings>) {
+            this.ai = { ...this.ai, ...newSettings }
+            saveState(this.$state)
+        },
+    },
 })

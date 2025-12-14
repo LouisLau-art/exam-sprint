@@ -1,12 +1,12 @@
 <template>
   <div class="relative">
     <button
-      @click="isOpen = !isOpen"
-      class="btn-ghost p-2 rounded-lg flex items-center gap-2"
+      @click.stop="isOpen = !isOpen"
+      class="flex items-center gap-2 px-3 py-2 rounded-xl glass-subtle hover:bg-white/60 dark:hover:bg-slate-700/60 transition-all"
       :title="currentLocaleName"
     >
-      <span class="i-carbon-translate text-xl" />
-      <span class="hidden sm:inline text-sm font-medium">{{ currentLocaleShort }}</span>
+      <span class="i-carbon-translate text-lg text-slate-700 dark:text-slate-200" />
+      <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ currentLocaleShort }}</span>
     </button>
     
     <!-- Dropdown -->
@@ -20,8 +20,7 @@
     >
       <div
         v-if="isOpen"
-        class="absolute right-0 top-full mt-2 w-36 glass rounded-xl shadow-xl overflow-hidden z-50"
-        v-click-outside="() => isOpen = false"
+        class="absolute right-0 top-full mt-2 w-36 glass-strong rounded-xl shadow-xl overflow-hidden z-50"
       >
         <button
           v-for="loc in availableLocales"
@@ -30,7 +29,7 @@
           :class="[
             'w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors',
             'hover:bg-white/50 dark:hover:bg-slate-700/50',
-            locale === loc.code ? 'text-primary-600 dark:text-primary-400' : 'text-slate-600 dark:text-slate-300'
+            locale === loc.code ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' : 'text-slate-700 dark:text-slate-200'
           ]"
         >
           <span>{{ loc.name }}</span>
@@ -57,7 +56,7 @@ const currentLocaleName = computed(() =>
 )
 
 const currentLocaleShort = computed(() => 
-  locale.value === 'zh-CN' ? '中' : 'EN'
+  locale.value === 'zh-CN' ? '中文' : 'EN'
 )
 
 const selectLocale = (code: string) => {
@@ -65,18 +64,20 @@ const selectLocale = (code: string) => {
   isOpen.value = false
 }
 
-// Click outside directive
-const vClickOutside = {
-  mounted(el: HTMLElement, binding: any) {
-    el._clickOutside = (event: MouseEvent) => {
-      if (!el.contains(event.target as Node)) {
-        binding.value()
-      }
+// Close on click outside
+onMounted(() => {
+  const closeHandler = () => {
+    if (isOpen.value) {
+      isOpen.value = false
     }
-    document.addEventListener('click', el._clickOutside)
-  },
-  unmounted(el: HTMLElement) {
-    document.removeEventListener('click', el._clickOutside)
-  },
-}
+  }
+  
+  setTimeout(() => {
+    document.addEventListener('click', closeHandler)
+  }, 100)
+  
+  onUnmounted(() => {
+    document.removeEventListener('click', closeHandler)
+  })
+})
 </script>

@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useLocalStorage } from '@vueuse/core'
 
 export interface Task {
     id: string
@@ -23,125 +22,138 @@ export interface TasksState {
 
 const generateId = () => `task_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
-export const useTasksStore = defineStore('tasks', () => {
-    const state = useLocalStorage<TasksState>('exam-sprint-tasks', { tasks: [] })
+const STORAGE_KEY = 'exam-sprint-tasks'
 
-    // Getters
-    const allTasks = computed(() => state.value.tasks)
-
-    const incompleteTasks = computed(() =>
-        state.value.tasks.filter(t => !t.completed).sort((a, b) => a.order - b.order)
-    )
-
-    const completedTasks = computed(() =>
-        state.value.tasks.filter(t => t.completed)
-    )
-
-    const todayTasks = computed(() => {
-        const today = new Date().toISOString().split('T')[0]
-        return state.value.tasks.filter(t => {
-            if (t.completed) return false
-            if (!t.dueDate) return true // Tasks without due date show in "today"
-            return t.dueDate <= today
-        }).sort((a, b) => {
-            // Sort by priority first, then by order
-            const priorityOrder = { P0: 0, P1: 1, P2: 2 }
-            const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority]
-            if (priorityDiff !== 0) return priorityDiff
-            return a.order - b.order
-        })
-    })
-
-    const thisWeekTasks = computed(() => {
-        const today = new Date()
-        const weekEnd = new Date(today)
-        weekEnd.setDate(today.getDate() + 7)
-        const weekEndStr = weekEnd.toISOString().split('T')[0]
-
-        return state.value.tasks.filter(t => {
-            if (t.completed) return false
-            if (!t.dueDate) return false
-            return t.dueDate <= weekEndStr
-        }).sort((a, b) => a.order - b.order)
-    })
-
-    const tasksByGoal = (goalId: string) => computed(() =>
-        state.value.tasks.filter(t => t.goalId === goalId)
-    )
-
-    const todayCompletedCount = computed(() => {
-        const today = new Date().toISOString().split('T')[0]
-        return state.value.tasks.filter(t =>
-            t.completed && t.completedAt?.startsWith(today)
-        ).length
-    })
-
-    // Actions
-    const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'completedAt' | 'order' | 'completedPomodoros'>) => {
-        const newTask: Task = {
-            ...taskData,
-            id: generateId(),
-            createdAt: new Date().toISOString(),
-            completedAt: null,
-            completedPomodoros: 0,
-            order: state.value.tasks.length,
-        }
-        state.value.tasks.push(newTask)
-        return newTask
+const loadState = (): TasksState => {
+    if (typeof window === 'undefined') {
+        return { tasks: [] }
     }
 
-    const updateTask = (id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => {
-        const index = state.value.tasks.findIndex(t => t.id === id)
-        if (index !== -1) {
-            state.value.tasks[index] = { ...state.value.tasks[index], ...updates }
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        if (saved) {
+            return JSON.parse(saved)
         }
+    } catch (e) {
+        console.error('Failed to load tasks state:', e)
     }
 
-    const toggleComplete = (id: string) => {
-        const task = state.value.tasks.find(t => t.id === id)
-        if (task) {
-            task.completed = !task.completed
-            task.completedAt = task.completed ? new Date().toISOString() : null
-        }
-    }
+    return { tasks: [] }
+}
 
-    const deleteTask = (id: string) => {
-        const index = state.value.tasks.findIndex(t => t.id === id)
-        if (index !== -1) {
-            state.value.tasks.splice(index, 1)
-        }
-    }
+const saveState = (state: TasksState) => {
+    if (typeof window === 'undefined') return
 
-    const reorderTasks = (taskIds: string[]) => {
-        taskIds.forEach((id, index) => {
-            const task = state.value.tasks.find(t => t.id === id)
-            if (task) {
-                task.order = index
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    } catch (e) {
+        console.error('Failed to save tasks state:', e)
+    }
+}
+
+export const useTasksStore = defineStore('tasks', {
+    state: (): TasksState => loadState(),
+
+    getters: {
+        allTasks: (state) => state.tasks,
+
+        incompleteTasks: (state) =>
+            state.tasks.filter(t => !t.completed).sort((a, b) => a.order - b.order),
+
+        completedTasks: (state) =>
+            state.tasks.filter(t => t.completed),
+
+        todayTasks: (state) => {
+            const today = new Date().toISOString().split('T')[0]
+            return state.tasks.filter(t => {
+                if (t.completed) return false
+                if (!t.dueDate) return true
+                return t.dueDate <= today
+            }).sort((a, b) => {
+                const priorityOrder = { P0: 0, P1: 1, P2: 2 }
+                const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority]
+                if (priorityDiff !== 0) return priorityDiff
+                return a.order - b.order
+            })
+        },
+
+        thisWeekTasks: (state) => {
+            const today = new Date()
+            const weekEnd = new Date(today)
+            weekEnd.setDate(today.getDate() + 7)
+            const weekEndStr = weekEnd.toISOString().split('T')[0]
+
+            return state.tasks.filter(t => {
+                if (t.completed) return false
+                if (!t.dueDate) return false
+                return t.dueDate <= weekEndStr
+            }).sort((a, b) => a.order - b.order)
+        },
+
+        todayCompletedCount: (state) => {
+            const today = new Date().toISOString().split('T')[0]
+            return state.tasks.filter(t =>
+                t.completed && t.completedAt?.startsWith(today)
+            ).length
+        },
+    },
+
+    actions: {
+        addTask(taskData: Omit<Task, 'id' | 'createdAt' | 'completedAt' | 'order' | 'completedPomodoros'>) {
+            const newTask: Task = {
+                ...taskData,
+                id: generateId(),
+                createdAt: new Date().toISOString(),
+                completedAt: null,
+                completedPomodoros: 0,
+                order: this.tasks.length,
             }
-        })
-    }
+            this.tasks.push(newTask)
+            saveState(this.$state)
+            return newTask
+        },
 
-    const incrementPomodoro = (id: string) => {
-        const task = state.value.tasks.find(t => t.id === id)
-        if (task) {
-            task.completedPomodoros++
-        }
-    }
+        updateTask(id: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) {
+            const index = this.tasks.findIndex(t => t.id === id)
+            if (index !== -1) {
+                this.tasks[index] = { ...this.tasks[index], ...updates }
+                saveState(this.$state)
+            }
+        },
 
-    return {
-        state,
-        allTasks,
-        incompleteTasks,
-        completedTasks,
-        todayTasks,
-        thisWeekTasks,
-        tasksByGoal,
-        todayCompletedCount,
-        addTask,
-        updateTask,
-        toggleComplete,
-        deleteTask,
-        reorderTasks,
-        incrementPomodoro,
-    }
+        toggleComplete(id: string) {
+            const task = this.tasks.find(t => t.id === id)
+            if (task) {
+                task.completed = !task.completed
+                task.completedAt = task.completed ? new Date().toISOString() : null
+                saveState(this.$state)
+            }
+        },
+
+        deleteTask(id: string) {
+            const index = this.tasks.findIndex(t => t.id === id)
+            if (index !== -1) {
+                this.tasks.splice(index, 1)
+                saveState(this.$state)
+            }
+        },
+
+        reorderTasks(taskIds: string[]) {
+            taskIds.forEach((id, index) => {
+                const task = this.tasks.find(t => t.id === id)
+                if (task) {
+                    task.order = index
+                }
+            })
+            saveState(this.$state)
+        },
+
+        incrementPomodoro(id: string) {
+            const task = this.tasks.find(t => t.id === id)
+            if (task) {
+                task.completedPomodoros++
+                saveState(this.$state)
+            }
+        },
+    },
 })

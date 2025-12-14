@@ -47,27 +47,27 @@ export default defineConfig({
         },
     },
     shortcuts: {
-        // Glassmorphism effects
-        'glass': 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/20 dark:border-slate-700/50',
-        'glass-strong': 'bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl border border-white/30 dark:border-slate-700/60',
-        'glass-subtle': 'bg-white/50 dark:bg-slate-800/50 backdrop-blur-lg border border-white/10 dark:border-slate-700/30',
+        // Enhanced Glassmorphism effects
+        'glass': 'bg-white/75 dark:bg-slate-800/75 backdrop-blur-xl border border-white/40 dark:border-slate-700/40 shadow-lg shadow-slate-900/5 dark:shadow-slate-900/20',
+        'glass-strong': 'bg-white/85 dark:bg-slate-800/85 backdrop-blur-2xl border border-white/50 dark:border-slate-700/50 shadow-xl shadow-slate-900/10 dark:shadow-slate-900/30',
+        'glass-subtle': 'bg-white/50 dark:bg-slate-800/50 backdrop-blur-lg border border-white/30 dark:border-slate-700/30',
 
         // Layout
         'flex-center': 'flex items-center justify-center',
         'flex-between': 'flex items-center justify-between',
 
-        // Button variants
+        // Button variants with glassmorphism
         'btn': 'px-4 py-2 rounded-xl font-medium transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
-        'btn-primary': 'btn bg-primary-500 hover:bg-primary-600 text-white shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40',
-        'btn-secondary': 'btn glass hover:bg-white/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200',
-        'btn-ghost': 'btn hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300',
+        'btn-primary': 'btn bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 hover:scale-[1.02] active:scale-[0.98]',
+        'btn-secondary': 'btn glass hover:bg-white/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:scale-[1.02] active:scale-[0.98]',
+        'btn-ghost': 'btn hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-600 dark:text-slate-300',
 
-        // Card styles
-        'card': 'glass rounded-2xl p-6 shadow-xl shadow-slate-900/5 dark:shadow-slate-900/30',
-        'card-hover': 'card hover:shadow-2xl hover:shadow-slate-900/10 dark:hover:shadow-slate-900/40 transition-shadow duration-300',
+        // Card styles with glassmorphism
+        'card': 'glass rounded-2xl p-6',
+        'card-hover': 'card hover:shadow-2xl hover:shadow-slate-900/15 dark:hover:shadow-slate-900/40 hover:scale-[1.01] transition-all duration-300',
 
-        // Input styles
-        'input': 'w-full px-4 py-3 rounded-xl glass text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-200',
+        // Input styles with glassmorphism
+        'input': 'w-full px-4 py-3 rounded-xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-lg border border-white/40 dark:border-slate-700/40 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all duration-200',
 
         // Text styles
         'text-gradient': 'bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent',
@@ -85,8 +85,10 @@ export default defineConfig({
         'i-carbon-play-filled',
         'i-carbon-pause-filled',
         'i-carbon-stop-filled',
+        'i-carbon-next-filled',
         'i-carbon-add',
         'i-carbon-checkmark',
+        'i-carbon-checkmark-filled',
         'i-carbon-close',
         'i-carbon-edit',
         'i-carbon-trash-can',
@@ -95,5 +97,6 @@ export default defineConfig({
         'i-carbon-calendar',
         'i-carbon-flag',
         'i-carbon-tag',
+        'i-carbon-loading',
     ],
 })
