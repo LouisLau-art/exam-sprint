@@ -111,7 +111,8 @@
         "focusTrend": "Focus Trend",
         "taskTrend": "Task Trend",
         "subjectDistribution": "Subject Distribution",
-        "export": "Export"
+        "export": "Export",
+        "noData": "No data yet"
     },
     "dashboard": {
         "welcome": "Let's do this!",

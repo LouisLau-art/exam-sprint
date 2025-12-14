@@ -22,12 +22,12 @@
 
 - **框架**: Nuxt 4 + Vue 3
 - **状态管理**: Pinia
-- **UI 组件**: Nuxt UI v4 (基于 Radix Vue)
-- **样式**: Tailwind CSS v4
+- **UI 组件**: Nuxt UI v4
+- **样式**: Tailwind CSS v4 (Nuxt UI 内置)
 - **图表**: ApexCharts
-- **图标**: Lucide Icons (via Nuxt Icon)
+- **图标**: Nuxt Icon (Lucide 图标集)
 - **国际化**: @nuxtjs/i18n
-- **存储**: SQLite (服务端持久化)
+- **数据库**: SQLite (better-sqlite3)
 
 ### 🚀 快速开始
 

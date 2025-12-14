@@ -13,9 +13,15 @@
     <!-- Charts Row -->
     <div class="grid lg:grid-cols-2 gap-6">
       <!-- Weekly Focus Trend -->
-      <UCard :title="t('stats.focusTrend')">
+      <UCard>
+        <template #header>
+          <h3 class="font-semibold text-slate-800 dark:text-slate-100">
+            {{ t('stats.focusTrend') }}
+          </h3>
+        </template>
+        
         <ClientOnly>
-          <div v-if="isClient">
+          <div v-if="isClient" class="h-64">
             <VueApexCharts
               type="area"
               height="250"
@@ -24,7 +30,7 @@
             />
           </div>
           <template #fallback>
-            <div class="h-64 flex-center text-slate-400">
+            <div class="h-64 flex items-center justify-center text-slate-400">
               {{ t('common.loading') }}
             </div>
           </template>
@@ -32,9 +38,15 @@
       </UCard>
       
       <!-- Task Completion Trend -->
-      <UCard :title="t('stats.taskTrend')">
+      <UCard>
+        <template #header>
+          <h3 class="font-semibold text-slate-800 dark:text-slate-100">
+            {{ t('stats.taskTrend') }}
+          </h3>
+        </template>
+        
         <ClientOnly>
-          <div v-if="isClient">
+          <div v-if="isClient" class="h-64">
             <VueApexCharts
               type="bar"
               height="250"
@@ -43,7 +55,7 @@
             />
           </div>
           <template #fallback>
-            <div class="h-64 flex-center text-slate-400">
+            <div class="h-64 flex items-center justify-center text-slate-400">
               {{ t('common.loading') }}
             </div>
           </template>
@@ -52,7 +64,13 @@
     </div>
     
     <!-- Recent Sessions -->
-    <UCard :title="t('pomodoro.todayPomodoros')">
+    <UCard>
+      <template #header>
+        <h3 class="font-semibold text-slate-800 dark:text-slate-100">
+          {{ t('pomodoro.todayPomodoros') }}
+        </h3>
+      </template>
+      
       <div v-if="recentSessions.length" class="space-y-3">
         <div
           v-for="session in recentSessions"
@@ -70,21 +88,19 @@
               </p>
             </div>
           </div>
-          <UBadge v-if="session.note" variant="default">
+          <UBadge v-if="session.note" variant="subtle">
             {{ session.note }}
           </UBadge>
         </div>
       </div>
       <p v-else class="text-center py-8 text-slate-500 dark:text-slate-400">
-        {{ t('tasks.noTasks') }}
+        {{ t('stats.noData') }}
       </p>
     </UCard>
   </div>
 </template>
 
 <script setup lang="ts">
-
-
 import DailyStats from '~/components/dashboard/DailyStats.vue'
 
 const { t, locale } = useI18n()
@@ -191,15 +207,12 @@ const focusChartOptions = computed(() => ({
     labels: { style: { colors: '#94a3b8' } },
   },
   grid: {
-    borderColor: '#e2e8f0',
+    borderColor: '#334155',
     strokeDashArray: 4,
   },
   dataLabels: { enabled: false },
   tooltip: {
     theme: 'dark',
-    style: {
-      fontSize: '14px',
-    },
   },
 }))
 
@@ -224,15 +237,12 @@ const taskChartOptions = computed(() => ({
     labels: { style: { colors: '#94a3b8' } },
   },
   grid: {
-    borderColor: '#e2e8f0',
+    borderColor: '#334155',
     strokeDashArray: 4,
   },
   dataLabels: { enabled: false },
   tooltip: {
     theme: 'dark',
-    style: {
-      fontSize: '14px',
-    },
   },
 }))
 
@@ -246,6 +256,7 @@ const recentSessions = computed(() => {
 })
 
 const formatTime = (isoString: string) => {
+  if (!isoString) return ''
   return new Date(isoString).toLocaleTimeString(locale.value, {
     hour: '2-digit',
     minute: '2-digit',

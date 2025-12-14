@@ -111,7 +111,8 @@
         "focusTrend": "专注趋势",
         "taskTrend": "任务趋势",
         "subjectDistribution": "科目分布",
-        "export": "导出"
+        "export": "导出",
+        "noData": "暂无数据"
     },
     "dashboard": {
         "welcome": "今天也要加油！",
