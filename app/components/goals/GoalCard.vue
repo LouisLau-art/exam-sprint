@@ -1,13 +1,13 @@
 <template>
-  <Card class="relative overflow-hidden">
+  <UCard class="relative overflow-hidden">
     <template #header>
       <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
         {{ t('goals.title') }}
       </h3>
-      <Button size="sm" @click="$emit('add')">
+      <UButton size="sm" @click="$emit('add')">
         <span class="i-carbon-add mr-1" />
         {{ t('goals.addGoal') }}
-      </Button>
+      </UButton>
     </template>
     
     <div v-if="!goals.length" class="text-center py-8">
@@ -61,12 +61,12 @@
         </div>
       </div>
     </div>
-  </Card>
+  </UCard>
 </template>
 
 <script setup lang="ts">
-import Card from '~/components/ui/Card.vue'
-import Button from '~/components/ui/Button.vue'
+
+
 import type { Goal } from '~/stores/goals'
 
 interface Props {

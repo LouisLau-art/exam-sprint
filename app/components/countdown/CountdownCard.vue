@@ -1,61 +1,61 @@
 <template>
-  <Card class="relative overflow-hidden">
+  <UCard class="relative overflow-hidden">
     <!-- Background gradient -->
     <div class="absolute inset-0 bg-gradient-to-br from-primary-500/20 to-purple-500/20 dark:from-primary-500/10 dark:to-purple-500/10" />
     
     <div class="relative">
       <!-- No exam set -->
-      <div v-if="!countdownStore.state.examDate" class="text-center py-8">
-        <div class="i-carbon-calendar text-4xl text-slate-400 mb-4" />
-        <p class="text-slate-500 dark:text-slate-400 mb-4">{{ t('countdown.setExam') }}</p>
-        <Button @click="showModal = true" size="sm">
-          <span class="i-carbon-add mr-1" />
+      <div v-if="!examDate" class="text-center py-8">
+        <UIcon name="i-lucide-calendar" class="text-4xl text-gray-400 mb-4" />
+        <p class="text-gray-500 dark:text-gray-400 mb-4">{{ t('countdown.setExam') }}</p>
+        <UButton @click="showModal = true" size="sm">
+          <UIcon name="i-lucide-plus" class="mr-1" />
           {{ t('countdown.setExam') }}
-        </Button>
+        </UButton>
       </div>
       
       <!-- Countdown display -->
       <div v-else>
         <div class="text-center mb-6">
-          <h3 class="text-lg font-medium text-slate-600 dark:text-slate-300 mb-1">
+          <h3 class="text-lg font-medium text-gray-600 dark:text-gray-300 mb-1">
             {{ t('countdown.title') }}
           </h3>
           <p class="text-2xl font-bold text-primary-600 dark:text-primary-400">
-            {{ countdownStore.state.examName }}
+            {{ examName }}
           </p>
         </div>
         
         <!-- Countdown numbers -->
         <div v-if="countdown" class="grid grid-cols-4 gap-3 mb-6">
           <div class="text-center">
-            <div class="text-4xl lg:text-5xl font-bold text-slate-800 dark:text-slate-100 mb-1">
+            <div class="text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-1">
               {{ countdown.days }}
             </div>
-            <div class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {{ t('countdown.daysLeft') }}
             </div>
           </div>
           <div class="text-center">
-            <div class="text-4xl lg:text-5xl font-bold text-slate-800 dark:text-slate-100 mb-1">
+            <div class="text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-1">
               {{ countdown.hours.toString().padStart(2, '0') }}
             </div>
-            <div class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {{ t('countdown.hoursLeft') }}
             </div>
           </div>
           <div class="text-center">
-            <div class="text-4xl lg:text-5xl font-bold text-slate-800 dark:text-slate-100 mb-1">
+            <div class="text-4xl lg:text-5xl font-bold text-gray-800 dark:text-gray-100 mb-1">
               {{ countdown.minutes.toString().padStart(2, '0') }}
             </div>
-            <div class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {{ t('countdown.minutesLeft') }}
             </div>
           </div>
           <div class="text-center">
-            <div class="text-4xl lg:text-5xl font-bold text-primary-500 animate-pulse-slow mb-1">
+            <div class="text-4xl lg:text-5xl font-bold text-primary-500 animate-pulse mb-1">
               {{ countdown.seconds.toString().padStart(2, '0') }}
             </div>
-            <div class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {{ t('countdown.secondsLeft') }}
             </div>
           </div>
@@ -63,49 +63,48 @@
         
         <!-- Edit button -->
         <div class="flex justify-center">
-          <button 
-            @click="showModal = true"
-            class="text-sm text-slate-500 hover:text-primary-500 transition-colors"
-          >
-            <span class="i-carbon-edit mr-1" />
+          <UButton variant="ghost" size="sm" @click="showModal = true">
+            <UIcon name="i-lucide-edit" class="mr-1" />
             {{ t('common.edit') }}
-          </button>
+          </UButton>
         </div>
       </div>
     </div>
     
-    <!-- Modal -->
-    <Modal v-model="showModal" :title="t('countdown.setExam')">
-      <div class="space-y-4">
-        <Input
-          v-model="formData.examName"
-          :label="t('countdown.examName')"
-          :placeholder="t('countdown.examName')"
-        />
-        <Input
-          v-model="formData.examDate"
-          :label="t('countdown.examDate')"
-          type="date"
-        />
-      </div>
-      <template #footer>
-        <Button variant="ghost" @click="showModal = false">
-          {{ t('common.cancel') }}
-        </Button>
-        <Button @click="saveExam">
-          {{ t('common.save') }}
-        </Button>
+    <!-- Modal - uses #content slot -->
+    <UModal v-model:open="showModal" :title="t('countdown.setExam')">
+      <UButton label="Hidden trigger" class="hidden" />
+      
+      <template #content>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {{ t('countdown.examName') }}
+            </label>
+            <UInput v-model="formData.examName" :placeholder="t('countdown.examName')" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {{ t('countdown.examDate') }}
+            </label>
+            <UInput v-model="formData.examDate" type="date" />
+          </div>
+          
+          <div class="flex gap-2 justify-end pt-4">
+            <UButton color="neutral" variant="outline" @click="showModal = false">
+              {{ t('common.cancel') }}
+            </UButton>
+            <UButton @click="saveExam">
+              {{ t('common.save') }}
+            </UButton>
+          </div>
+        </div>
       </template>
-    </Modal>
-  </Card>
+    </UModal>
+  </UCard>
 </template>
 
 <script setup lang="ts">
-import Card from '~/components/ui/Card.vue'
-import Button from '~/components/ui/Button.vue'
-import Input from '~/components/ui/Input.vue'
-import Modal from '~/components/ui/Modal.vue'
-
 const { t } = useI18n()
 const countdownStore = useCountdownStore()
 
@@ -115,23 +114,51 @@ const formData = reactive({
   examDate: '',
 })
 
-const countdown = computed(() => countdownStore.examCountdown)
+// Use storeToRefs for reactivity or direct access
+const examDate = computed(() => countdownStore.examDate)
+const examName = computed(() => countdownStore.examName)
 
-// Real-time update
-const updateInterval = ref<NodeJS.Timeout>()
+// Real-time update for seconds - tick triggers recomputation
+const tick = ref(0)
+let updateInterval: NodeJS.Timeout | undefined
+
+// Countdown that depends on tick to force recalculation
+const countdown = computed(() => {
+  // Access tick to create dependency
+  const _ = tick.value
+  
+  if (!examDate.value) return null
+  
+  const now = new Date()
+  const exam = new Date(examDate.value)
+  const diff = exam.getTime() - now.getTime()
+  
+  if (diff <= 0) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 }
+  }
+  
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+  
+  return { days, hours, minutes, seconds, total: diff }
+})
+
 onMounted(() => {
-  updateInterval.value = setInterval(() => {
-    // Force reactivity update
+  updateInterval = setInterval(() => {
+    tick.value++
   }, 1000)
 })
+
 onUnmounted(() => {
-  if (updateInterval.value) clearInterval(updateInterval.value)
+  if (updateInterval) clearInterval(updateInterval)
 })
 
 watch(showModal, (val) => {
   if (val) {
-    formData.examName = countdownStore.state.examName
-    formData.examDate = countdownStore.state.examDate || ''
+    formData.examName = countdownStore.examName || ''
+    formData.examDate = countdownStore.examDate || ''
   }
 })
 

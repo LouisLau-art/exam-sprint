@@ -1,12 +1,12 @@
 <template>
   <div class="space-y-6">
     <!-- Welcome Message -->
-    <div class="flex-between">
+    <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">
+        <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">
           {{ greeting }}, {{ t('dashboard.welcome') }}
         </h1>
-        <p class="text-slate-500 dark:text-slate-400">
+        <p class="text-gray-500 dark:text-gray-400">
           {{ currentDate }}
         </p>
       </div>
@@ -20,9 +20,9 @@
         <CountdownCard />
         
         <!-- Milestones -->
-        <Card>
+        <UCard>
           <MilestoneList />
-        </Card>
+        </UCard>
       </div>
       
       <!-- Right Column -->
@@ -36,15 +36,17 @@
     </div>
     
     <!-- Today's Tasks -->
-    <Card>
+    <UCard>
       <template #header>
-        <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
-          {{ t('tasks.todayTasks') }}
-        </h3>
-        <Button size="sm" @click="showTaskModal = true">
-          <span class="i-carbon-add mr-1" />
-          {{ t('tasks.addTask') }}
-        </Button>
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
+            {{ t('tasks.todayTasks') }}
+          </h3>
+          <UButton size="sm" @click="showTaskModal = true">
+            <UIcon name="i-lucide-plus" class="mr-1" />
+            {{ t('tasks.addTask') }}
+          </UButton>
+        </div>
       </template>
       
       <TaskList 
@@ -53,7 +55,7 @@
         @edit="editTask"
         @delete="deleteTask"
       />
-    </Card>
+    </UCard>
     
     <!-- Task Modal -->
     <TaskModal 
@@ -65,8 +67,6 @@
 </template>
 
 <script setup lang="ts">
-import Card from '~/components/ui/Card.vue'
-import Button from '~/components/ui/Button.vue'
 import CountdownCard from '~/components/countdown/CountdownCard.vue'
 import MilestoneList from '~/components/countdown/MilestoneList.vue'
 import PomodoroTimer from '~/components/pomodoro/PomodoroTimer.vue'
@@ -105,9 +105,7 @@ const editTask = (task: Task) => {
 }
 
 const deleteTask = (id: string) => {
-  if (confirm(t('common.confirm') + '?')) {
-    tasksStore.deleteTask(id)
-  }
+  tasksStore.deleteTask(id)
 }
 
 // Page meta

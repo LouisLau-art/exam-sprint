@@ -1,48 +1,68 @@
 <template>
-  <div class="flex-center gap-4">
+  <div class="flex items-center justify-center gap-4">
     <!-- Start / Pause / Resume -->
     <button
-      v-if="pomodoroStore.isIdle"
+      v-if="isIdle"
       @click="pomodoroStore.start()"
-      class="w-16 h-16 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 flex-center transition-all"
+      class="w-16 h-16 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
     >
-      <span class="i-carbon-play-filled text-2xl" />
+      <UIcon name="i-lucide-play" class="text-2xl" />
     </button>
     
     <button
-      v-else-if="pomodoroStore.isRunning"
+      v-else-if="isRunning"
       @click="pomodoroStore.pause()"
-      class="w-16 h-16 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/30 flex-center transition-all"
+      class="w-16 h-16 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
     >
-      <span class="i-carbon-pause-filled text-2xl" />
+      <UIcon name="i-lucide-pause" class="text-2xl" />
     </button>
     
     <button
-      v-else-if="pomodoroStore.isPaused"
+      v-else-if="isPaused"
       @click="pomodoroStore.resume()"
-      class="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30 flex-center transition-all"
+      class="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
     >
-      <span class="i-carbon-play-filled text-2xl" />
+      <UIcon name="i-lucide-play" class="text-2xl" />
     </button>
     
     <!-- Stop -->
     <button
-      v-if="!pomodoroStore.isIdle"
-      @click="confirmStop"
-      class="w-12 h-12 rounded-full glass hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-500 hover:text-red-500 flex-center transition-all"
+      v-if="!isIdle"
+      @click="showStopConfirm = true"
+      class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-500 flex items-center justify-center transition-all"
     >
-      <span class="i-carbon-stop-filled text-xl" />
+      <UIcon name="i-lucide-square" class="text-xl" />
     </button>
     
     <!-- Skip (during break) -->
     <button
-      v-if="pomodoroStore.state.type !== 'focus' && pomodoroStore.isRunning"
+      v-if="currentType !== 'focus' && isRunning"
       @click="pomodoroStore.skip()"
-      class="w-12 h-12 rounded-full glass text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 flex-center transition-all"
+      class="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 flex items-center justify-center transition-all"
       :title="t('pomodoro.skip')"
     >
-      <span class="i-carbon-next-filled text-xl" />
+      <UIcon name="i-lucide-skip-forward" class="text-xl" />
     </button>
+    
+    <!-- Confirm Dialog -->
+    <UModal v-model:open="showStopConfirm" :title="t('common.confirm')">
+      <UButton class="hidden" />
+      <template #content>
+        <div class="p-6">
+          <p class="text-gray-600 dark:text-gray-300 mb-6">
+            {{ t('pomodoro.stopConfirm') || '确定要停止当前计时吗？' }}
+          </p>
+          <div class="flex gap-2 justify-end">
+            <UButton color="neutral" variant="outline" @click="showStopConfirm = false">
+              {{ t('common.cancel') }}
+            </UButton>
+            <UButton color="error" @click="confirmStop">
+              {{ t('common.confirm') }}
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -50,9 +70,15 @@
 const { t } = useI18n()
 const pomodoroStore = usePomodoroStore()
 
+const showStopConfirm = ref(false)
+
+const isIdle = computed(() => pomodoroStore.isIdle)
+const isRunning = computed(() => pomodoroStore.isRunning)
+const isPaused = computed(() => pomodoroStore.isPaused)
+const currentType = computed(() => pomodoroStore.type || 'focus')
+
 const confirmStop = () => {
-  if (confirm(t('common.confirm') + '?')) {
-    pomodoroStore.stop()
-  }
+  pomodoroStore.stop()
+  showStopConfirm.value = false
 }
 </script>

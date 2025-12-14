@@ -1,5 +1,5 @@
 <template>
-  <Card>
+  <UCard>
     <template #header>
       <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
         {{ t('stats.dailyReview') }}
@@ -37,11 +37,11 @@
         </div>
       </div>
     </div>
-  </Card>
+  </UCard>
 </template>
 
 <script setup lang="ts">
-import Card from '~/components/ui/Card.vue'
+
 
 const { t } = useI18n()
 const tasksStore = useTasksStore()

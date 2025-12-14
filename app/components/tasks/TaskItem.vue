@@ -31,9 +31,9 @@
           >
             {{ task.title }}
           </span>
-          <Badge :variant="task.priority">
+          <UBadge :variant="task.priority">
             {{ t(`tasks.priority${task.priority}`) }}
-          </Badge>
+          </UBadge>
         </div>
         
         <!-- Meta info -->
@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import Badge from '~/components/ui/Badge.vue'
+
 import type { Task } from '~/stores/tasks'
 
 interface Props {

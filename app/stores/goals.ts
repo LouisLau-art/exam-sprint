@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, skipHydrate } from 'pinia'
 
 export interface Goal {
     id: string
@@ -13,10 +13,6 @@ export interface Goal {
     createdAt: string
 }
 
-export interface GoalsState {
-    goals: Goal[]
-}
-
 const generateId = () => `goal_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
 const goalColors = [
@@ -25,100 +21,110 @@ const goalColors = [
 
 const STORAGE_KEY = 'exam-sprint-goals'
 
-const loadState = (): GoalsState => {
-    if (typeof window === 'undefined') {
-        return { goals: [] }
-    }
+export const useGoalsStore = defineStore('goals', () => {
+    const goals = ref<Goal[]>([])
 
-    try {
+    // Load from localStorage on client
+    if (import.meta.client) {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) {
-            return JSON.parse(saved)
+            try {
+                const data = JSON.parse(saved)
+                goals.value = data.goals || []
+            } catch (e) {
+                console.error('Failed to load goals state:', e)
+            }
         }
-    } catch (e) {
-        console.error('Failed to load goals state:', e)
     }
 
-    return { goals: [] }
-}
-
-const saveState = (state: GoalsState) => {
-    if (typeof window === 'undefined') return
-
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    } catch (e) {
-        console.error('Failed to save goals state:', e)
+    const save = () => {
+        if (!import.meta.client) return
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            goals: goals.value,
+        }))
     }
-}
 
-export const useGoalsStore = defineStore('goals', {
-    state: (): GoalsState => loadState(),
+    // Getters
+    const allGoals = computed(() => goals.value)
 
-    getters: {
-        allGoals: (state) => state.goals,
+    const activeGoals = computed(() =>
+        goals.value.filter(g => g.current < g.target)
+    )
 
-        activeGoals: (state) =>
-            state.goals.filter(g => g.current < g.target),
+    const completedGoals = computed(() =>
+        goals.value.filter(g => g.current >= g.target)
+    )
 
-        completedGoals: (state) =>
-            state.goals.filter(g => g.current >= g.target),
-    },
+    // Actions
+    const getGoal = (id: string) => {
+        return goals.value.find(g => g.id === id)
+    }
 
-    actions: {
-        getGoal(id: string) {
-            return this.goals.find(g => g.id === id)
-        },
+    const getProgress = (id: string) => {
+        const goal = goals.value.find(g => g.id === id)
+        if (!goal) return 0
+        return Math.min(100, Math.round((goal.current / goal.target) * 100))
+    }
 
-        getProgress(id: string) {
-            const goal = this.goals.find(g => g.id === id)
-            if (!goal) return 0
-            return Math.min(100, Math.round((goal.current / goal.target) * 100))
-        },
+    const addGoal = (goalData: Omit<Goal, 'id' | 'createdAt' | 'current' | 'color'>) => {
+        const newGoal: Goal = {
+            ...goalData,
+            id: generateId(),
+            createdAt: new Date().toISOString(),
+            current: 0,
+            color: goalColors[goals.value.length % goalColors.length],
+        }
+        goals.value.push(newGoal)
+        save()
+        return newGoal
+    }
 
-        addGoal(goalData: Omit<Goal, 'id' | 'createdAt' | 'current' | 'color'>) {
-            const newGoal: Goal = {
-                ...goalData,
-                id: generateId(),
-                createdAt: new Date().toISOString(),
-                current: 0,
-                color: goalColors[this.goals.length % goalColors.length],
-            }
-            this.goals.push(newGoal)
-            saveState(this.$state)
-            return newGoal
-        },
+    const updateGoal = (id: string, updates: Partial<Omit<Goal, 'id' | 'createdAt'>>) => {
+        const index = goals.value.findIndex(g => g.id === id)
+        if (index !== -1) {
+            goals.value[index] = { ...goals.value[index], ...updates }
+            save()
+        }
+    }
 
-        updateGoal(id: string, updates: Partial<Omit<Goal, 'id' | 'createdAt'>>) {
-            const index = this.goals.findIndex(g => g.id === id)
-            if (index !== -1) {
-                this.goals[index] = { ...this.goals[index], ...updates }
-                saveState(this.$state)
-            }
-        },
+    const updateProgress = (id: string, value: number) => {
+        const goal = goals.value.find(g => g.id === id)
+        if (goal) {
+            goal.current = value
+            save()
+        }
+    }
 
-        updateProgress(id: string, value: number) {
-            const goal = this.goals.find(g => g.id === id)
-            if (goal) {
-                goal.current = value
-                saveState(this.$state)
-            }
-        },
+    const incrementProgress = (id: string, amount: number = 1) => {
+        const goal = goals.value.find(g => g.id === id)
+        if (goal) {
+            goal.current = Math.min(goal.target, goal.current + amount)
+            save()
+        }
+    }
 
-        incrementProgress(id: string, amount: number = 1) {
-            const goal = this.goals.find(g => g.id === id)
-            if (goal) {
-                goal.current = Math.min(goal.target, goal.current + amount)
-                saveState(this.$state)
-            }
-        },
+    const deleteGoal = (id: string) => {
+        const index = goals.value.findIndex(g => g.id === id)
+        if (index !== -1) {
+            goals.value.splice(index, 1)
+            save()
+        }
+    }
 
-        deleteGoal(id: string) {
-            const index = this.goals.findIndex(g => g.id === id)
-            if (index !== -1) {
-                this.goals.splice(index, 1)
-                saveState(this.$state)
-            }
-        },
-    },
+    return {
+        // State
+        goals: skipHydrate(goals),
+        // Getters
+        allGoals,
+        activeGoals,
+        completedGoals,
+        // Actions
+        getGoal,
+        getProgress,
+        addGoal,
+        updateGoal,
+        updateProgress,
+        incrementProgress,
+        deleteGoal,
+    }
 })

@@ -4,10 +4,10 @@
     <div v-if="!tasks.length" class="text-center py-12">
       <div class="i-carbon-task text-5xl text-slate-300 dark:text-slate-600 mb-4" />
       <p class="text-slate-500 dark:text-slate-400 mb-4">{{ t('tasks.noTasks') }}</p>
-      <Button @click="$emit('add')" size="sm">
+      <UButton @click="$emit('add')" size="sm">
         <span class="i-carbon-add mr-1" />
         {{ t('tasks.addFirstTask') }}
-      </Button>
+      </UButton>
     </div>
     
     <!-- Task list -->
@@ -30,7 +30,7 @@
 
 <script setup lang="ts">
 import TaskItem from './TaskItem.vue'
-import Button from '~/components/ui/Button.vue'
+
 import type { Task } from '~/stores/tasks'
 
 interface Props {

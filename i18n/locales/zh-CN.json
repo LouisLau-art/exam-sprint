@@ -80,7 +80,8 @@
         "sessionComplete": "番茄完成！",
         "sessionNote": "添加备注（可选）",
         "linkTask": "关联任务",
-        "todayPomodoros": "今日番茄"
+        "todayPomodoros": "今日番茄",
+        "stopConfirm": "确定要停止当前计时吗？"
     },
     "goals": {
         "title": "目标",

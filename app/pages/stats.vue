@@ -13,32 +13,46 @@
     <!-- Charts Row -->
     <div class="grid lg:grid-cols-2 gap-6">
       <!-- Weekly Focus Trend -->
-      <Card :title="t('stats.focusTrend')">
+      <UCard :title="t('stats.focusTrend')">
         <ClientOnly>
-          <VueApexCharts
-            type="area"
-            height="250"
-            :options="focusChartOptions"
-            :series="focusSeries"
-          />
+          <div v-if="isClient">
+            <VueApexCharts
+              type="area"
+              height="250"
+              :options="focusChartOptions"
+              :series="focusSeries"
+            />
+          </div>
+          <template #fallback>
+            <div class="h-64 flex-center text-slate-400">
+              {{ t('common.loading') }}
+            </div>
+          </template>
         </ClientOnly>
-      </Card>
+      </UCard>
       
       <!-- Task Completion Trend -->
-      <Card :title="t('stats.taskTrend')">
+      <UCard :title="t('stats.taskTrend')">
         <ClientOnly>
-          <VueApexCharts
-            type="bar"
-            height="250"
-            :options="taskChartOptions"
-            :series="taskSeries"
-          />
+          <div v-if="isClient">
+            <VueApexCharts
+              type="bar"
+              height="250"
+              :options="taskChartOptions"
+              :series="taskSeries"
+            />
+          </div>
+          <template #fallback>
+            <div class="h-64 flex-center text-slate-400">
+              {{ t('common.loading') }}
+            </div>
+          </template>
         </ClientOnly>
-      </Card>
+      </UCard>
     </div>
     
     <!-- Recent Sessions -->
-    <Card :title="t('pomodoro.todayPomodoros')">
+    <UCard :title="t('pomodoro.todayPomodoros')">
       <div v-if="recentSessions.length" class="space-y-3">
         <div
           v-for="session in recentSessions"
@@ -56,30 +70,39 @@
               </p>
             </div>
           </div>
-          <Badge v-if="session.note" variant="default">
+          <UBadge v-if="session.note" variant="default">
             {{ session.note }}
-          </Badge>
+          </UBadge>
         </div>
       </div>
       <p v-else class="text-center py-8 text-slate-500 dark:text-slate-400">
         {{ t('tasks.noTasks') }}
       </p>
-    </Card>
+    </UCard>
   </div>
 </template>
 
 <script setup lang="ts">
-import Card from '~/components/ui/Card.vue'
-import Badge from '~/components/ui/Badge.vue'
+
+
 import DailyStats from '~/components/dashboard/DailyStats.vue'
 
 const { t, locale } = useI18n()
 const pomodoroStore = usePomodoroStore()
 
-// Chart component (client only)
-const VueApexCharts = defineAsyncComponent(() => 
-  import('vue3-apexcharts').then(m => m.default)
-)
+// Check if client-side
+const isClient = ref(false)
+onMounted(() => {
+  isClient.value = true
+})
+
+// Chart component (client only) - lazy load
+let VueApexCharts: any = null
+if (import.meta.client) {
+  VueApexCharts = defineAsyncComponent(() => 
+    import('vue3-apexcharts').then(m => m.default)
+  )
+}
 
 // Get last 7 days labels
 const getLast7Days = () => {
@@ -92,25 +115,24 @@ const getLast7Days = () => {
   return days
 }
 
+// Use safe access
+const todayFocusMinutes = computed(() => pomodoroStore.todayFocusMinutes || 0)
+const todayPomodoroCount = computed(() => pomodoroStore.todayPomodoroCount || 0)
+
 // Mock data for demo (in real app, would come from store)
-const focusSeries = ref([
+const focusSeries = computed(() => [
   {
     name: t('stats.focusMinutes'),
-    data: [45, 75, 60, 90, 80, 120, pomodoroStore.todayFocusMinutes],
+    data: [45, 75, 60, 90, 80, 120, todayFocusMinutes.value],
   },
 ])
 
-const taskSeries = ref([
+const taskSeries = computed(() => [
   {
     name: t('stats.completedTasks'),
-    data: [3, 5, 4, 6, 5, 8, pomodoroStore.todayPomodoroCount],
+    data: [3, 5, 4, 6, 5, 8, todayPomodoroCount.value],
   },
 ])
-
-const chartTheme = computed(() => ({
-  mode: 'light' as const,
-  palette: 'palette1',
-}))
 
 const focusChartOptions = computed(() => ({
   chart: {
@@ -118,7 +140,6 @@ const focusChartOptions = computed(() => ({
     toolbar: { show: false },
     background: 'transparent',
   },
-  theme: chartTheme.value,
   colors: ['#6366f1'],
   stroke: { curve: 'smooth' as const, width: 3 },
   fill: {
@@ -149,7 +170,6 @@ const taskChartOptions = computed(() => ({
     toolbar: { show: false },
     background: 'transparent',
   },
-  theme: chartTheme.value,
   colors: ['#22c55e'],
   plotOptions: {
     bar: {
@@ -172,9 +192,10 @@ const taskChartOptions = computed(() => ({
 }))
 
 const recentSessions = computed(() => {
+  const sessions = pomodoroStore.sessions || []
   const today = new Date().toISOString().split('T')[0]
-  return pomodoroStore.state.sessions
-    .filter(s => s.completed && s.type === 'focus' && s.startTime.startsWith(today))
+  return sessions
+    .filter((s: any) => s.completed && s.type === 'focus' && s.startTime.startsWith(today))
     .slice(-5)
     .reverse()
 })

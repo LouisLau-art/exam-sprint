@@ -1,4 +1,5 @@
-import { defineStore } from 'pinia'
+import { defineStore, skipHydrate } from 'pinia'
+import { useLocalStorage } from '@vueuse/core'
 
 export interface Milestone {
     id: string
@@ -17,130 +18,143 @@ const generateId = () => `milestone_${Date.now()}_${Math.random().toString(36).s
 
 const milestoneColors = ['#ef4444', '#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6']
 
-const STORAGE_KEY = 'exam-sprint-countdown'
+export const useCountdownStore = defineStore('countdown', () => {
+    // Use useLocalStorage for automatic persistence
+    const examDate = ref<string | null>(null)
+    const examName = ref('')
+    const milestones = ref<Milestone[]>([])
 
-// Load from localStorage
-const loadState = (): CountdownState => {
-    if (typeof window === 'undefined') {
-        return { examDate: null, examName: '', milestones: [] }
-    }
-
-    try {
-        const saved = localStorage.getItem(STORAGE_KEY)
+    // Load from localStorage on client
+    if (import.meta.client) {
+        const saved = localStorage.getItem('exam-sprint-countdown')
         if (saved) {
-            return JSON.parse(saved)
+            try {
+                const data = JSON.parse(saved)
+                examDate.value = data.examDate || null
+                examName.value = data.examName || ''
+                milestones.value = data.milestones || []
+            } catch (e) {
+                console.error('Failed to load countdown state:', e)
+            }
         }
-    } catch (e) {
-        console.error('Failed to load countdown state:', e)
     }
 
-    return { examDate: null, examName: '', milestones: [] }
-}
-
-// Save to localStorage
-const saveState = (state: CountdownState) => {
-    if (typeof window === 'undefined') return
-
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    } catch (e) {
-        console.error('Failed to save countdown state:', e)
+    // Save helper
+    const save = () => {
+        if (!import.meta.client) return
+        localStorage.setItem('exam-sprint-countdown', JSON.stringify({
+            examDate: examDate.value,
+            examName: examName.value,
+            milestones: milestones.value,
+        }))
     }
-}
 
-export const useCountdownStore = defineStore('countdown', {
-    state: (): CountdownState => loadState(),
+    // Getters
+    const examCountdown = computed(() => {
+        if (!examDate.value) return null
 
-    getters: {
-        examCountdown: (state) => {
-            if (!state.examDate) return null
+        const now = new Date()
+        const exam = new Date(examDate.value)
+        const diff = exam.getTime() - now.getTime()
 
-            const now = new Date()
-            const exam = new Date(state.examDate)
-            const diff = exam.getTime() - now.getTime()
+        if (diff <= 0) {
+            return { days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 }
+        }
 
-            if (diff <= 0) {
-                return { days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 }
-            }
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
 
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+        return { days, hours, minutes, seconds, total: diff }
+    })
 
-            return { days, hours, minutes, seconds, total: diff }
-        },
+    const sortedMilestones = computed(() => {
+        return [...milestones.value].sort((a, b) =>
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+        )
+    })
 
-        sortedMilestones: (state) => {
-            return [...state.milestones].sort((a, b) =>
-                new Date(a.date).getTime() - new Date(b.date).getTime()
-            )
-        },
+    const upcomingMilestones = computed(() => {
+        const now = new Date()
+        return sortedMilestones.value.filter(m => new Date(m.date) > now)
+    })
 
-        upcomingMilestones(): Milestone[] {
-            const now = new Date()
-            return this.sortedMilestones.filter(m => new Date(m.date) > now)
-        },
-    },
+    // Actions
+    const setExam = (name: string, date: string) => {
+        examName.value = name
+        examDate.value = date
+        save()
+    }
 
-    actions: {
-        setExam(name: string, date: string) {
-            this.examName = name
-            this.examDate = date
-            saveState(this.$state)
-        },
+    const clearExam = () => {
+        examName.value = ''
+        examDate.value = null
+        save()
+    }
 
-        clearExam() {
-            this.examName = ''
-            this.examDate = null
-            saveState(this.$state)
-        },
+    const addMilestone = (name: string, date: string) => {
+        const milestone: Milestone = {
+            id: generateId(),
+            name,
+            date,
+            color: milestoneColors[milestones.value.length % milestoneColors.length],
+        }
+        milestones.value.push(milestone)
+        save()
+        return milestone
+    }
 
-        addMilestone(name: string, date: string) {
-            const milestone: Milestone = {
-                id: generateId(),
-                name,
-                date,
-                color: milestoneColors[this.milestones.length % milestoneColors.length],
-            }
-            this.milestones.push(milestone)
-            saveState(this.$state)
-            return milestone
-        },
+    const updateMilestone = (id: string, updates: Partial<Omit<Milestone, 'id'>>) => {
+        const index = milestones.value.findIndex(m => m.id === id)
+        if (index !== -1) {
+            milestones.value[index] = { ...milestones.value[index], ...updates }
+            save()
+        }
+    }
 
-        updateMilestone(id: string, updates: Partial<Omit<Milestone, 'id'>>) {
-            const index = this.milestones.findIndex(m => m.id === id)
-            if (index !== -1) {
-                this.milestones[index] = { ...this.milestones[index], ...updates }
-                saveState(this.$state)
-            }
-        },
+    const deleteMilestone = (id: string) => {
+        const index = milestones.value.findIndex(m => m.id === id)
+        if (index !== -1) {
+            milestones.value.splice(index, 1)
+            save()
+        }
+    }
 
-        deleteMilestone(id: string) {
-            const index = this.milestones.findIndex(m => m.id === id)
-            if (index !== -1) {
-                this.milestones.splice(index, 1)
-                saveState(this.$state)
-            }
-        },
+    const getMilestoneCountdown = (id: string) => {
+        const milestone = milestones.value.find(m => m.id === id)
+        if (!milestone) return null
 
-        getMilestoneCountdown(id: string) {
-            const milestone = this.milestones.find(m => m.id === id)
-            if (!milestone) return null
+        const now = new Date()
+        const target = new Date(milestone.date)
+        const diff = target.getTime() - now.getTime()
 
-            const now = new Date()
-            const target = new Date(milestone.date)
-            const diff = target.getTime() - now.getTime()
+        if (diff <= 0) {
+            return { days: 0, hours: 0, minutes: 0, total: 0 }
+        }
 
-            if (diff <= 0) {
-                return { days: 0, hours: 0, minutes: 0, total: 0 }
-            }
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
 
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+        return { days, hours, minutes, total: diff }
+    }
 
-            return { days, hours, minutes, total: diff }
-        },
-    },
+    return {
+        // State
+        examDate: skipHydrate(examDate),
+        examName: skipHydrate(examName),
+        milestones: skipHydrate(milestones),
+        // Getters
+        examCountdown,
+        sortedMilestones,
+        upcomingMilestones,
+        // Actions
+        setExam,
+        clearExam,
+        addMilestone,
+        updateMilestone,
+        deleteMilestone,
+        getMilestoneCountdown,
+    }
 })

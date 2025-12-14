@@ -1,103 +1,93 @@
 <template>
-  <Modal v-model="isOpen" :title="isEditing ? t('tasks.editTask') : t('tasks.addTask')">
-    <div class="space-y-4">
-      <Input
-        v-model="formData.title"
-        :label="t('tasks.taskTitle')"
-        :placeholder="t('tasks.taskTitle')"
-        icon="i-carbon-task"
-      />
-      
-      <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-          {{ t('tasks.notes') }}
-        </label>
-        <textarea
-          v-model="formData.notes"
-          :placeholder="t('tasks.notes')"
-          rows="3"
-          class="input resize-none"
-        />
-      </div>
-      
-      <div class="grid grid-cols-2 gap-4">
-        <Input
-          v-model="formData.dueDate"
-          :label="t('tasks.dueDate')"
-          type="date"
-        />
-        
-        <div class="space-y-1">
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            {{ t('tasks.priority') }}
-          </label>
-          <select v-model="formData.priority" class="input">
-            <option value="P0">{{ t('tasks.priorityP0') }} (P0)</option>
-            <option value="P1">{{ t('tasks.priorityP1') }} (P1)</option>
-            <option value="P2">{{ t('tasks.priorityP2') }} (P2)</option>
-          </select>
-        </div>
-      </div>
-      
-      <Input
-        v-model.number="formData.estimatedPomodoros"
-        :label="t('tasks.estimatedPomodoros')"
-        type="number"
-        :placeholder="'3'"
-      />
-      
-      <div class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-          {{ t('tasks.tags') }}
-        </label>
-        <input
-          v-model="tagsInput"
-          :placeholder="'数学, 第三章'"
-          class="input"
-          @keydown.enter.prevent="addTag"
-        />
-        <div v-if="formData.tags.length" class="flex flex-wrap gap-2 mt-2">
-          <Badge 
-            v-for="tag in formData.tags" 
-            :key="tag"
-            class="cursor-pointer hover:opacity-70"
-            @click="removeTag(tag)"
-          >
-            {{ tag }}
-            <span class="i-carbon-close ml-1 text-xs" />
-          </Badge>
-        </div>
-      </div>
-      
-      <div v-if="goalsStore.allGoals.length" class="space-y-1">
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-          {{ t('tasks.linkedGoal') }}
-        </label>
-        <select v-model="formData.goalId" class="input">
-          <option :value="null">-- {{ t('common.all') }} --</option>
-          <option v-for="goal in goalsStore.allGoals" :key="goal.id" :value="goal.id">
-            {{ goal.title }}
-          </option>
-        </select>
-      </div>
-    </div>
+  <UModal v-model:open="isOpen" :title="isEditing ? t('tasks.editTask') : t('tasks.addTask')">
+    <UButton class="hidden" />
     
-    <template #footer>
-      <Button variant="ghost" @click="close">
-        {{ t('common.cancel') }}
-      </Button>
-      <Button @click="save" :disabled="!formData.title.trim()">
-        {{ t('common.save') }}
-      </Button>
+    <template #content>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ t('tasks.taskTitle') }}
+          </label>
+          <UInput v-model="formData.title" :placeholder="t('tasks.taskTitle')" />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ t('tasks.notes') }}
+          </label>
+          <UTextarea
+            v-model="formData.notes"
+            :placeholder="t('tasks.notes')"
+            :rows="3"
+          />
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {{ t('tasks.dueDate') }}
+            </label>
+            <UInput v-model="formData.dueDate" type="date" />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {{ t('tasks.priority') }}
+            </label>
+            <USelectMenu v-model="formData.priority" value-key="value" :items="priorityOptions" :search-input="false" class="w-full" />
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ t('tasks.estimatedPomodoros') }}
+          </label>
+          <UInput v-model="formData.estimatedPomodoros" type="number" placeholder="3" />
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ t('tasks.tags') }}
+          </label>
+          <UInput
+            v-model="tagsInput"
+            placeholder="数学, 第三章"
+            @keydown.enter.prevent="addTag"
+          />
+          <div v-if="formData.tags.length" class="flex flex-wrap gap-2 mt-2">
+            <UBadge 
+              v-for="tag in formData.tags" 
+              :key="tag"
+              class="cursor-pointer hover:opacity-70"
+              @click="removeTag(tag)"
+            >
+              {{ tag }}
+              <UIcon name="i-lucide-x" class="ml-1 text-xs" />
+            </UBadge>
+          </div>
+        </div>
+        
+        <div v-if="goalsStore.allGoals.length">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ t('tasks.linkedGoal') }}
+          </label>
+          <USelectMenu v-model="formData.goalId" value-key="value" :items="goalOptions" :search-input="false" class="w-full" />
+        </div>
+        
+        <div class="flex gap-2 justify-end pt-4">
+          <UButton color="neutral" variant="outline" @click="close">
+            {{ t('common.cancel') }}
+          </UButton>
+          <UButton @click="save" :disabled="!formData.title.trim()">
+            {{ t('common.save') }}
+          </UButton>
+        </div>
+      </div>
     </template>
-  </Modal>
+  </UModal>
 </template>
 
 <script setup lang="ts">
-import Modal from '~/components/ui/Modal.vue'
-import Input from '~/components/ui/Input.vue'
-import Button from '~/components/ui/Button.vue'
-import Badge from '~/components/ui/Badge.vue'
 import type { Task } from '~/stores/tasks'
 
 interface Props {
@@ -124,6 +114,17 @@ const isOpen = computed({
 })
 
 const isEditing = computed(() => !!props.editTask)
+
+const priorityOptions = computed(() => [
+  { label: `${t('tasks.priorityP0')} (P0)`, value: 'P0' },
+  { label: `${t('tasks.priorityP1')} (P1)`, value: 'P1' },
+  { label: `${t('tasks.priorityP2')} (P2)`, value: 'P2' },
+])
+
+const goalOptions = computed(() => [
+  { label: `-- ${t('common.all')} --`, value: null },
+  ...goalsStore.allGoals.map(g => ({ label: g.title, value: g.id }))
+])
 
 const defaultFormData = () => ({
   title: '',
@@ -180,7 +181,7 @@ const save = () => {
     notes: formData.notes,
     dueDate: formData.dueDate || null,
     priority: formData.priority,
-    estimatedPomodoros: formData.estimatedPomodoros || 1,
+    estimatedPomodoros: Number(formData.estimatedPomodoros) || 1,
     tags: formData.tags,
     goalId: formData.goalId,
     completed: false,

@@ -80,7 +80,8 @@
         "sessionComplete": "Pomodoro Complete!",
         "sessionNote": "Add a note (optional)",
         "linkTask": "Link to Task",
-        "todayPomodoros": "Today's Pomodoros"
+        "todayPomodoros": "Today's Pomodoros",
+        "stopConfirm": "Are you sure you want to stop the timer?"
     },
     "goals": {
         "title": "Goals",

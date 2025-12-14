@@ -12,7 +12,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@iconify/vue": "^5.0.0",
+    "@nuxt/ui": "^4.2.1",
     "@nuxtjs/i18n": "^10.2.1",
     "@pinia/nuxt": "^0.11.3",
     "@vueuse/core": "^14.1.0",
@@ -20,18 +20,13 @@
     "apexcharts": "^5.3.6",
     "nuxt": "^4.2.2",
     "pinia": "^3.0.4",
-    "reka-ui": "^2.6.1",
-    "sql.js": "^1.13.0",
     "vue": "^3.5.25",
     "vue3-apexcharts": "^1.10.0",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
-    "@iconify-json/carbon": "^1.2.15",
+    "@iconify-json/lucide": "^1.2.81",
     "@nuxt/devtools": "npm:@nuxt/devtools-nightly@latest",
-    "@unocss/nuxt": "^66.5.10",
-    "@unocss/preset-icons": "^66.5.10",
-    "typescript": "^5.9.3",
-    "unocss": "^66.5.10"
+    "typescript": "^5.9.3"
   }
 }

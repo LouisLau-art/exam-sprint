@@ -1,24 +1,24 @@
 <template>
   <div class="space-y-3">
-    <div class="flex-between">
-      <h4 class="font-medium text-slate-700 dark:text-slate-300">
+    <div class="flex items-center justify-between">
+      <h4 class="font-medium text-gray-700 dark:text-gray-300">
         {{ t('countdown.milestone') }}
       </h4>
       <button
         @click="showModal = true"
         class="text-sm text-primary-500 hover:text-primary-600 flex items-center gap-1"
       >
-        <span class="i-carbon-add" />
+        <UIcon name="i-lucide-plus" />
         {{ t('countdown.addMilestone') }}
       </button>
     </div>
     
     <!-- Milestones list -->
-    <div v-if="countdownStore.upcomingMilestones.length" class="space-y-2">
+    <div v-if="upcomingMilestones.length" class="space-y-2">
       <div
-        v-for="milestone in countdownStore.upcomingMilestones"
+        v-for="milestone in upcomingMilestones"
         :key="milestone.id"
-        class="glass-subtle rounded-xl p-3 flex-between group"
+        class="bg-gray-100 dark:bg-gray-800 rounded-xl p-3 flex items-center justify-between group"
       >
         <div class="flex items-center gap-3">
           <div 
@@ -26,8 +26,8 @@
             :style="{ backgroundColor: milestone.color }"
           />
           <div>
-            <p class="font-medium text-slate-700 dark:text-slate-200">{{ milestone.name }}</p>
-            <p class="text-xs text-slate-500">{{ formatDate(milestone.date) }}</p>
+            <p class="font-medium text-gray-700 dark:text-gray-200">{{ milestone.name }}</p>
+            <p class="text-xs text-gray-500">{{ formatDate(milestone.date) }}</p>
           </div>
         </div>
         <div class="flex items-center gap-3">
@@ -36,49 +36,52 @@
           </span>
           <button
             @click="deleteMilestone(milestone.id)"
-            class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all"
+            class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
           >
-            <span class="i-carbon-trash-can" />
+            <UIcon name="i-lucide-trash-2" />
           </button>
         </div>
       </div>
     </div>
     
-    <p v-else class="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
+    <p v-else class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
       {{ t('countdown.addMilestone') }}
     </p>
     
     <!-- Add Modal -->
-    <Modal v-model="showModal" :title="t('countdown.addMilestone')" size="sm">
-      <div class="space-y-4">
-        <Input
-          v-model="formData.name"
-          :label="t('countdown.milestone')"
-          placeholder="e.g. 一轮复习结束"
-        />
-        <Input
-          v-model="formData.date"
-          :label="t('countdown.examDate')"
-          type="date"
-        />
-      </div>
-      <template #footer>
-        <Button variant="ghost" @click="showModal = false">
-          {{ t('common.cancel') }}
-        </Button>
-        <Button @click="addMilestone">
-          {{ t('common.add') }}
-        </Button>
+    <UModal v-model:open="showModal" :title="t('countdown.addMilestone')">
+      <UButton class="hidden" />
+      
+      <template #content>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {{ t('countdown.milestone') }}
+            </label>
+            <UInput v-model="formData.name" placeholder="e.g. 一轮复习结束" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {{ t('countdown.examDate') }}
+            </label>
+            <UInput v-model="formData.date" type="date" />
+          </div>
+          
+          <div class="flex gap-2 justify-end pt-4">
+            <UButton color="neutral" variant="outline" @click="showModal = false">
+              {{ t('common.cancel') }}
+            </UButton>
+            <UButton @click="addMilestone">
+              {{ t('common.add') }}
+            </UButton>
+          </div>
+        </div>
       </template>
-    </Modal>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import Button from '~/components/ui/Button.vue'
-import Input from '~/components/ui/Input.vue'
-import Modal from '~/components/ui/Modal.vue'
-
 const { t, locale } = useI18n()
 const countdownStore = useCountdownStore()
 
@@ -88,13 +91,15 @@ const formData = reactive({
   date: '',
 })
 
+const upcomingMilestones = computed(() => countdownStore.upcomingMilestones)
+
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
   return date.toLocaleDateString(locale.value, { month: 'short', day: 'numeric' })
 }
 
 const getMilestoneDays = (id: string) => {
-  const countdown = countdownStore.getMilestoneCountdown(id).value
+  const countdown = countdownStore.getMilestoneCountdown(id)
   return countdown?.days ?? 0
 }
 

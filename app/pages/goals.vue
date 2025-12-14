@@ -5,10 +5,10 @@
       <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">
         {{ t('goals.title') }}
       </h1>
-      <Button @click="showGoalModal = true">
+      <UButton @click="showGoalModal = true">
         <span class="i-carbon-add mr-1" />
         {{ t('goals.addGoal') }}
-      </Button>
+      </UButton>
     </div>
     
     <!-- Goals Grid -->
@@ -30,9 +30,9 @@
               {{ goal.title }}
             </h3>
           </div>
-          <Badge :variant="goal.type === 'task-driven' ? 'primary' : 'warning'">
+          <UBadge :variant="goal.type === 'task-driven' ? 'primary' : 'warning'">
             {{ t(`goals.${goal.type === 'task-driven' ? 'taskDriven' : 'timeDriven'}`) }}
-          </Badge>
+          </UBadge>
         </div>
         
         <!-- Description -->
@@ -90,14 +90,14 @@
     </div>
     
     <!-- Empty State -->
-    <Card v-else class="text-center py-12">
+    <UCard v-else class="text-center py-12">
       <div class="i-carbon-target text-6xl text-slate-300 dark:text-slate-600 mb-4" />
       <p class="text-slate-500 dark:text-slate-400 mb-4">{{ t('goals.noGoals') }}</p>
-      <Button @click="showGoalModal = true">
+      <UButton @click="showGoalModal = true">
         <span class="i-carbon-add mr-1" />
         {{ t('goals.addFirstGoal') }}
-      </Button>
-    </Card>
+      </UButton>
+    </UCard>
     
     <!-- Goal Modal -->
     <GoalModal 
@@ -109,9 +109,9 @@
 </template>
 
 <script setup lang="ts">
-import Card from '~/components/ui/Card.vue'
-import Button from '~/components/ui/Button.vue'
-import Badge from '~/components/ui/Badge.vue'
+
+
+
 import GoalModal from '~/components/goals/GoalModal.vue'
 import type { Goal } from '~/stores/goals'
 

@@ -1,12 +1,12 @@
 <template>
-  <Card class="relative overflow-hidden">
+  <UCard class="relative overflow-hidden">
     <!-- Background based on timer type -->
     <div 
       :class="[
         'absolute inset-0 transition-colors duration-500',
-        pomodoroStore.state.type === 'focus' && 'bg-gradient-to-br from-primary-500/20 to-indigo-500/20',
-        pomodoroStore.state.type === 'short-break' && 'bg-gradient-to-br from-green-500/20 to-emerald-500/20',
-        pomodoroStore.state.type === 'long-break' && 'bg-gradient-to-br from-sky-500/20 to-cyan-500/20',
+        currentType === 'focus' && 'bg-gradient-to-br from-primary-500/20 to-indigo-500/20',
+        currentType === 'short-break' && 'bg-gradient-to-br from-green-500/20 to-emerald-500/20',
+        currentType === 'long-break' && 'bg-gradient-to-br from-sky-500/20 to-cyan-500/20',
       ]"
     />
     
@@ -14,24 +14,24 @@
       <!-- Timer Type Tabs -->
       <div class="flex justify-center gap-2 mb-6">
         <button
-          v-for="type in timerTypes"
-          :key="type.value"
-          @click="setType(type.value)"
+          v-for="timerType in timerTypes"
+          :key="timerType.value"
+          @click="setType(timerType.value)"
           :disabled="!pomodoroStore.isIdle"
           :class="[
             'px-4 py-2 rounded-xl text-sm font-medium transition-all',
-            pomodoroStore.state.type === type.value
-              ? 'bg-white/80 dark:bg-slate-700/80 shadow-lg text-slate-800 dark:text-slate-100'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200',
-            !pomodoroStore.isIdle && 'cursor-not-allowed'
+            currentType === timerType.value
+              ? 'bg-white/80 dark:bg-gray-700/80 shadow-lg text-gray-800 dark:text-gray-100'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200',
+            !pomodoroStore.isIdle && 'cursor-not-allowed opacity-50'
           ]"
         >
-          {{ t(`pomodoro.${type.label}`) }}
+          {{ t(`pomodoro.${timerType.label}`) }}
         </button>
       </div>
       
       <!-- Timer Display -->
-      <div class="relative flex-center mb-8">
+      <div class="relative flex items-center justify-center mb-8">
         <!-- Progress Ring -->
         <svg class="w-48 h-48 lg:w-56 lg:h-56 transform -rotate-90">
           <circle
@@ -41,7 +41,7 @@
             fill="none"
             stroke="currentColor"
             :stroke-width="strokeWidth"
-            class="text-slate-200 dark:text-slate-700"
+            class="text-gray-200 dark:text-gray-700"
           />
           <circle
             cx="50%"
@@ -57,13 +57,13 @@
           />
         </svg>
         
-        <!-- Time Display -->
-        <div class="absolute inset-0 flex-center flex-col">
-          <span class="text-5xl lg:text-6xl font-bold text-slate-800 dark:text-slate-100 font-mono">
-            {{ pomodoroStore.formattedTime }}
+        <!-- Time Display (centered over SVG) -->
+        <div class="absolute inset-0 flex items-center justify-center flex-col">
+          <span class="text-5xl lg:text-6xl font-bold text-gray-800 dark:text-gray-100 font-mono">
+            {{ formattedTime }}
           </span>
-          <span class="text-sm text-slate-500 dark:text-slate-400 mt-2">
-            {{ t(`pomodoro.${pomodoroStore.state.type.replace('-', '')}`) }}
+          <span class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            {{ typeLabel }}
           </span>
         </div>
       </div>
@@ -72,24 +72,23 @@
       <TimerControls />
       
       <!-- Today's Stats -->
-      <div class="mt-6 pt-4 border-t border-slate-200/50 dark:border-slate-700/50 flex-center gap-6 text-sm">
+      <div class="mt-6 pt-4 border-t border-gray-200/50 dark:border-gray-700/50 flex items-center justify-center gap-6 text-sm">
         <div class="flex items-center gap-2">
           <span class="text-2xl">🍅</span>
-          <span class="font-medium text-slate-700 dark:text-slate-200">{{ pomodoroStore.todayPomodoroCount }}</span>
-          <span class="text-slate-500 dark:text-slate-400">{{ t('pomodoro.todayPomodoros') }}</span>
+          <span class="font-medium text-gray-700 dark:text-gray-200">{{ todayPomodoroCount }}</span>
+          <span class="text-gray-500 dark:text-gray-400">{{ t('pomodoro.todayPomodoros') }}</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="i-carbon-timer text-primary-500" />
-          <span class="font-medium text-slate-700 dark:text-slate-200">{{ pomodoroStore.todayFocusMinutes }}</span>
-          <span class="text-slate-500 dark:text-slate-400">{{ t('common.minutes') }}</span>
+          <UIcon name="i-lucide-timer" class="text-primary-500" />
+          <span class="font-medium text-gray-700 dark:text-gray-200">{{ todayFocusMinutes }}</span>
+          <span class="text-gray-500 dark:text-gray-400">{{ t('common.minutes') }}</span>
         </div>
       </div>
     </div>
-  </Card>
+  </UCard>
 </template>
 
 <script setup lang="ts">
-import Card from '~/components/ui/Card.vue'
 import TimerControls from './TimerControls.vue'
 
 const { t } = useI18n()
@@ -105,15 +104,32 @@ const radius = 90
 const strokeWidth = 8
 const circumference = 2 * Math.PI * radius
 
+// Use computed to access store properties safely
+const currentType = computed(() => pomodoroStore.type || 'focus')
+const formattedTime = computed(() => pomodoroStore.formattedTime || '25:00')
+const todayPomodoroCount = computed(() => pomodoroStore.todayPomodoroCount || 0)
+const todayFocusMinutes = computed(() => pomodoroStore.todayFocusMinutes || 0)
+const progress = computed(() => pomodoroStore.progress || 0)
+
+const typeLabel = computed(() => {
+  switch (currentType.value) {
+    case 'focus': return t('pomodoro.focus')
+    case 'short-break': return t('pomodoro.shortBreak')
+    case 'long-break': return t('pomodoro.longBreak')
+    default: return t('pomodoro.focus')
+  }
+})
+
 const strokeDashoffset = computed(() => {
-  return circumference - (pomodoroStore.progress / 100) * circumference
+  return circumference - (progress.value / 100) * circumference
 })
 
 const ringColor = computed(() => {
-  switch (pomodoroStore.state.type) {
+  switch (currentType.value) {
     case 'focus': return '#6366f1'
     case 'short-break': return '#22c55e'
     case 'long-break': return '#0ea5e9'
+    default: return '#6366f1'
   }
 })
 

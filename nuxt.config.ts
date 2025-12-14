@@ -7,15 +7,13 @@ export default defineNuxtConfig({
     devtools: { enabled: true },
 
     modules: [
-        '@unocss/nuxt',
+        '@nuxt/ui',
         '@pinia/nuxt',
         '@vueuse/nuxt',
         '@nuxtjs/i18n',
     ],
 
-    css: [
-        '~/assets/css/main.css',
-    ],
+    css: ['~/assets/css/main.css'],
 
     i18n: {
         locales: [
